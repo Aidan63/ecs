@@ -1,0 +1,10 @@
+-L safety
+-L bits
+-L RxHaxe
+-D analyzer-optimize
+-cp src
+-main Main
+--js out.js
+#--cpp bin
+--dce full
+--macro Safety.safeNavigation('', true)

@@ -2,9 +2,11 @@
 -L bits
 -L RxHaxe
 -D analyzer-optimize
--cp src
--main Main
---js out.js
-#--cpp bin
+-p src
+-m Main
+--debug
 --dce full
 --macro Safety.safeNavigation('', true)
+
+--js out.js
+#--cpp bin

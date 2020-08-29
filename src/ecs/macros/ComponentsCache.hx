@@ -1,6 +1,5 @@
 package ecs.macros;
 
-import haxe.macro.TypeTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
@@ -34,7 +33,16 @@ function getComponentID(_ct : ComplexType) {
  * Returns an expression creating a `haxe.ds.Vector` with capacity to store all the seen components.
  */
 macro function createComponentVector() {
-    return macro new haxe.ds.Vector($v{ componentIncrementer });
+    return macro {
+        final tmp = new haxe.ds.Vector($v{ componentIncrementer });
+
+        for (i in 0...tmp.length)
+        {
+            tmp[i] = new ecs.Components<Any>();
+        }
+
+        tmp;
+    }
 }
 
 /**
@@ -66,7 +74,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
+                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
 
                                 continue;
                             }
@@ -86,7 +94,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
+                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
     
                                 continue;
                             }
@@ -111,7 +119,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                                     sub  : ''
                                 }
 
-                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, new $path()));
+                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, new $path()));
                             case other:
                         }
                     case basic:
@@ -125,7 +133,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (cidx != null)
                         {
-                            exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
+                            exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
                         }
                         else
                         {
@@ -134,16 +142,18 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                 }
             // Pass field access through
             case EField(e, field):
+                // trace('EField');
                 // trace(e);
                 // trace(field);
             // Pass function calls through
             case ECall(e, params):
+                // trace('ECall');
                 // trace(e);
             // Pass construction calls through
             case ENew(t, params):
                 if (components.exists(t.name))
                 {
-                    exprs.push(macro $e{ _manager }.set($_entity, $v{ components.get(t.name) }, $e{ comp }));
+                    exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ components.get(t.name) }, $e{ comp }));
                 }
                 else
                 {
@@ -153,5 +163,5 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
         }
     }
 
-    return macro $a{ exprs };
+    return macro $b{ exprs };
 }

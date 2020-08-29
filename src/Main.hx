@@ -6,10 +6,11 @@ import ecs.macros.ComponentsCache;
 class Main {
 	static function main() {
 		final universe = new Universe();
-		final system   = new SomeSystem1();
+		final system   = new SomeSystem1(universe.families, universe.components);
 		final comp     = new SomeType3();
+		final entity   = new Entity(0);
 
-		setComponents(universe.components, new Entity(0), new SomeType1(), SomeType2, comp, comp.inner, getComp());
+		setComponents(universe.components, entity, new SomeType1(), SomeType2, comp, comp.inner, "spr_id", getComp());
 	}
 
 	static function getComp() {
@@ -20,13 +21,9 @@ class Main {
 class SomeSystem1 extends System {
 	@:family var movable : { posTable : SomeType1, velTable : SomeType2 };
 
-	@:family var drawable : { posTable : SomeType1, sprTable : Int };
+	@:family var drawable : { posTable : SomeType1, sprTable : String };
 
 	@:family var other : { typTable : SomeType3 };
-
-	public function new() {
-		onAdded();
-	}
 
 	override public function onAdded() {
 		trace(posTable);

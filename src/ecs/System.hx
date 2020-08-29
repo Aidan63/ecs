@@ -7,6 +7,11 @@ import ecs.core.FamilyManager;
     var families : FamilyManager;
 	var components : ComponentManager;
 
+	public function new(_families, _components) {
+		families   = _families;
+		components = _components;
+	}
+
 	public function onAdded() {
 		//
 	}

@@ -9,7 +9,7 @@ class Main {
 		final system   = new SomeSystem1();
 		final comp     = new SomeType3();
 
-		setComponents(universe.components, new Entity(0), new SomeType1(), SomeType2, comp, comp.inner, getComp(), "hello!");
+		setComponents(universe.components, new Entity(0), new SomeType1(), SomeType2, comp, comp.inner, getComp());
 	}
 
 	static function getComp() {
@@ -21,6 +21,8 @@ class SomeSystem1 extends System {
 	@:family var movable : { posTable : SomeType1, velTable : SomeType2 };
 
 	@:family var drawable : { posTable : SomeType1, sprTable : Int };
+
+	@:family var other : { typTable : SomeType3 };
 
 	public function new() {
 		onAdded();

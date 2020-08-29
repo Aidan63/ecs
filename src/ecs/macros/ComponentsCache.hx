@@ -37,86 +37,100 @@ macro function createComponentVector() {
     return macro new haxe.ds.Vector($v{ componentIncrementer });
 }
 
+/**
+ * Adds the specified components to the provided entity through the component manager.
+ * Many types of expressions are accepted, TODO : Document them.
+ * @param _manager 
+ * @param _entity 
+ * @param _components 
+ */
 macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>) {
-    trace(_manager);
-    trace(_entity.expr);
-
     final exprs = new Array<Expr>();
 
     for (comp in _components) {
-        // trace(comp);
-        
         switch comp.expr {
             // Will create a new instance of the constant type
             case EConst(c):
                 switch c {
-                    case CInt(_):
-                        final reif = macro : Int;
-
-                        // trace(reif.toString());
-                    case CFloat(_):
-                        final reif = macro : Float;
-
-                        // trace(reif.toString());
-                    case CString(s, _):
-                        final reif = macro : String;
-
-                        // trace(reif.toString());
                     case CIdent(s):
-                        trace(s);
-
-                        final type  = Context.getLocalType().getClass();
-                        final vars  = Context.getLocalTVars();
+                        final type = Context.getLocalType().getClass();
+                        final vars = Context.getLocalTVars();
 
                         // Check if this identifier is a field type.
                         final found = type.findField(s, true);
-                        if (found != null) {
-                            trace('found class field');
-                            trace(found.type.toString());
-                            trace(found.type.toComplexType());
 
-                            continue;
+                        if (found != null)
+                        {
+                            final name = found.type.toString();
+                            final cidx = components.get(name);
+
+                            if (cidx != null)
+                            {
+                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+
+                                continue;
+                            }
+                            else
+                            {
+                                Context.error('Component $name is not used in any families', Context.currentPos());
+                            }
                         }
 
                         // Check if this identifier is a local var.
                         final found = vars.get(s);
-                        if (found != null) {
-                            trace('found local var');
-                            trace(found.t.toString());
-                            trace(found.t.toComplexType());
 
-                            continue;
+                        if (found != null)
+                        {
+                            final name = found.t.toString();
+                            final cidx = components.get(name);
+
+                            if (cidx != null)
+                            {
+                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+    
+                                continue;
+                            }
+                            else
+                            {
+                                Context.error('Component $name is not used in any families', Context.currentPos());
+                            }
                         }
 
                         // If the above checks fail then treat the ident as a type
                         switch Context.getType(s) {
                             case TInst(ref, _):
-                                final t    = ref.get();
-                                final id   = components.get(t.name);
-                                final path = if (t.module != '') {
-                                    name : t.module,
-                                    pack : t.pack,
-                                    sub  : t.name
+                                final type = ref.get();
+                                final cidx = components.get(type.name);
+                                final path = if (type.module != '') {
+                                    name : type.module,
+                                    pack : type.pack,
+                                    sub  : type.name
                                 } else {
-                                    name : t.name,
-                                    pack : t.pack,
+                                    name : type.name,
+                                    pack : type.pack,
                                     sub  : ''
                                 }
 
-                                exprs.push({
-                                    pos  : Context.currentPos(),
-                                    expr : ECall(
-                                        { expr : EField(_manager, 'set'), pos : Context.currentPos() },
-                                        [
-                                            _entity,
-                                            { pos : Context.currentPos(), expr : EConst(CInt('$id')) },
-                                            { pos : Context.currentPos(), expr : ENew(path, []) }
-                                        ])
-                                });
+                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, new $path()));
                             case other:
                         }
+                    case basic:
+                        final name = switch basic {
+                            case CInt(_)       : (macro : Int).toString();
+                            case CFloat(_)     : (macro : Float).toString();
+                            case CString(_, _) : (macro : String).toString();
+                            case other: throw 'Unsupported CIdent $other';
+                        }
+                        final cidx = components.get(name);
 
-                    case other: Context.error('Unsupported constant expression $other', Context.currentPos());
+                        if (cidx != null)
+                        {
+                            exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+                        }
+                        else
+                        {
+                            Context.error('Component $name is not used in any families', Context.currentPos());
+                        }
                 }
             // Pass field access through
             case EField(e, field):
@@ -132,8 +146,5 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
         }
     }
 
-    return {
-        pos  : Context.currentPos(),
-        expr : EBlock(exprs)
-    }
+    return macro $a{ exprs };
 }

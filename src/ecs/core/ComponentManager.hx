@@ -14,6 +14,10 @@ class ComponentManager {
      */
     public final flags : Vector<Bits>;
 
+    /**
+     * All components stored in this system.
+     * Index into the vector with the components ID to get all components of that type.
+     */
     public final components : Vector<Components<Any>>;
 
     public function new(_entities) {
@@ -26,13 +30,20 @@ class ComponentManager {
         }
     }
 
-    public function getTable(_compID : Int) {
+    public function getTable(_compID : Int)
+    {
         return components[_compID];
     }
 
-    public function set(_entity : Entity, _id : Int, _component : Any) {
+    public function set(_entity : Entity, _id : Int, _component : Any)
+    {
         components[_id].set(_entity, _component);
 
-        flags[_entity].set(_id + 1);
+        flags[_entity].set(_id);
+    }
+
+    public function remove(_entity : Entity, _id : Int)
+    {
+        flags[_entity].unset(_id);
     }
 }

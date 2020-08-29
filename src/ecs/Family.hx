@@ -1,10 +1,15 @@
 package ecs;
 
+import bits.Bits;
+
 class Family {
     public final id : Int;
 
-    public function new(_id) {
-        id = _id;
+    public final mask : Bits;
+
+    public function new(_id, _mask) {
+        id   = _id;
+        mask = _mask;
     }
 
     public function size() {

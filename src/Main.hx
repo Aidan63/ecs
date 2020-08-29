@@ -10,7 +10,15 @@ class Main {
 		final comp     = new SomeType3();
 		final entity   = new Entity(0);
 
-		setComponents(universe.components, entity, new SomeType1(), SomeType2, comp, comp.inner, "spr_id", getComp());
+		setComponents(universe.components, entity, SomeType2, comp, comp.inner, "spr_id", getComp());
+
+		for (i in 0...universe.families.count()) {
+			final family = universe.families.get(i);
+			final comps  = universe.components.flags[entity];
+
+			trace(comps, family.mask);
+			trace(comps.areSet(family.mask));
+		}
 	}
 
 	static function getComp() {

@@ -1,7 +1,7 @@
 package ecs.macros;
 
-import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Context;
 
 using Safety;
 using haxe.macro.Tools;
@@ -9,6 +9,13 @@ using haxe.macro.Tools;
 private final components = new Map<String, Int>();
 
 private var componentIncrementer = 0;
+
+/**
+ * Returns the total number of unique components.
+ */
+function getComponentCount() {
+    return componentIncrementer;
+}
 
 /**
  * Given a complex type it will return an integer representing that type.

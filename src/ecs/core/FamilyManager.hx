@@ -11,10 +11,15 @@ class FamilyManager {
 
     public function new(_components) {
         components = _components;
-        families   = createFamilyVector();
+        
+        createFamilyVector();
     }
 
     public function get(_index : Int) {
         return families[_index];
+    }
+
+    public function count() {
+        return families.length;
     }
 }

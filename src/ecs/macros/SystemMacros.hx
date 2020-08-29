@@ -64,7 +64,7 @@ macro function familyConstruction() : Array<Field> {
             kind : FVar(macro : ecs.Family)
         });
 
-        insertExprIntoFunction(0, added, macro $i{ family.name } = families.get($v{ getFamily(family.types) }));
+        insertExprIntoFunction(0, added, macro $i{ family.name } = families.get($v{ getFamilyID(family.types) }));
     }
 
     return output;

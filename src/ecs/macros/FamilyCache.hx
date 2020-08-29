@@ -1,6 +1,6 @@
 package ecs.macros;
 
-import haxe.macro.Expr.ComplexType;
+import ecs.macros.SystemMacros.FamilyField;
 import haxe.ds.ReadOnlyArray;
 
 using haxe.macro.ComplexTypeTools;
@@ -9,16 +9,14 @@ private final families = new Map<String, Int>();
 
 private var familyIncrementer = 0;
 
-function getFamily(_names : ReadOnlyArray<ComplexType>) {
+function getFamily(_fields : ReadOnlyArray<FamilyField>) {
     final buffer = new StringBuf();
 
-    for (name in _names) {
-        buffer.add(name.toString());
+    for (field in _fields) {
+        buffer.add(field.type.toString());
     }
 
     final concat = buffer.toString();
-
-    trace(concat);
 
     return if (families.exists(concat)) {
         families.get(concat);

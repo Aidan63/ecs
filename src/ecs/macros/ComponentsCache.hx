@@ -45,7 +45,7 @@ macro function createComponentVector() {
  * @param _components 
  */
 macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>) {
-    final exprs = new Array<Expr>();
+    final exprs = [];
 
     for (comp in _components) {
         switch comp.expr {
@@ -66,7 +66,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
 
                                 continue;
                             }
@@ -86,7 +86,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+                                exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
     
                                 continue;
                             }
@@ -125,7 +125,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (cidx != null)
                         {
-                            exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, comp));
+                            exprs.push(macro $e{ _manager }.set($_entity, $v{ cidx }, $e{ comp }));
                         }
                         else
                         {
@@ -141,7 +141,14 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                 // trace(e);
             // Pass construction calls through
             case ENew(t, params):
-                // trace(t);
+                if (components.exists(t.name))
+                {
+                    exprs.push(macro $e{ _manager }.set($_entity, $v{ components.get(t.name) }, $e{ comp }));
+                }
+                else
+                {
+                    Context.error('Component ${ t.name } is not used in any families', Context.currentPos());
+                }
             case other: Context.error('Unsupported expression $other', Context.currentPos());
         }
     }

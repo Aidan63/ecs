@@ -1,16 +1,20 @@
 import ecs.Entity;
 import ecs.System;
 import ecs.Universe;
-import ecs.macros.ComponentsCache;
+
+using ecs.macros.ComponentsCache;
 
 class Main {
 	static function main() {
 		final universe = new Universe();
 		final system   = new SomeSystem1(universe.families, universe.components);
 		final comp     = new SomeType3();
-		final entity   = new Entity(0);
+		final entity   = universe.entities.create();
 
-		setComponents(universe.components, entity, SomeType2, comp, comp.inner, "spr_id", getComp());
+		universe.components.setComponents(entity, SomeType2, comp, comp.inner, "spr_id", getComp());
+
+		system.onAdded();
+		system.update();
 	}
 
 	static function getComp() {
@@ -28,6 +32,13 @@ class SomeSystem1 extends System {
 	override public function onAdded() {
 		trace(posTable);
 		trace(velTable);
+	}
+
+	override public function update() {
+		for (e in other) {
+			trace(e);
+			trace(typTable.get(e));
+		}
 	}
 }
 

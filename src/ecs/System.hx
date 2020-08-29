@@ -16,6 +16,10 @@ import ecs.core.FamilyManager;
 		//
 	}
 
+	public function update() {
+		//
+	}
+
 	public function onRemoved() {
 		//
 	}

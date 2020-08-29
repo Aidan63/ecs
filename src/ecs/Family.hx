@@ -7,12 +7,26 @@ class Family {
 
     public final mask : Bits;
 
+    final entities : Array<Entity>;
+
     public function new(_id, _mask) {
-        id   = _id;
-        mask = _mask;
+        id       = _id;
+        mask     = _mask;
+        entities = [];
     }
 
-    public function size() {
-        return 0;
+    public function add(_entity)
+    {
+        entities.push(_entity);
+    }
+
+    public function remove(_entity)
+    {
+        entities.remove(_entity);
+    }
+
+    public function iterator()
+    {
+        return entities.iterator();
     }
 }

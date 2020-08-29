@@ -2,7 +2,7 @@ package ecs;
 
 import haxe.ds.Vector;
 
-@:generic class Components<T> {
+class Components<T> {
     // final manager : ComponentManager;
     // final id : Int;
     final components : Vector<T>;

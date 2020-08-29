@@ -35,7 +35,7 @@ class FamilyManager
 
             if (comps.areSet(family.mask))
             {
-                trace('$_entity added to family $i');
+                family.add(_entity);
             }
 		}
     }

@@ -1,10 +1,11 @@
 -L safety
 -L bits
 -L RxHaxe
+-L haxe-concurrent
 -D analyzer-optimize
 -p src
 -m Main
---debug
+#--debug
 --dce full
 --macro Safety.safeNavigation('', true)
 

@@ -1,12 +1,19 @@
 package ecs.core;
 
+import rx.observables.IObservable;
+import rx.Subject;
 import bits.Bits;
 import haxe.ds.Vector;
 
 import ecs.macros.ComponentsCache;
 
-class ComponentManager {
+class ComponentManager
+{
     final entities : EntityManager;
+
+    final onComponentsAdded : Subject<Entity>;
+
+    final onComponentsRemoved : Subject<Entity>;
 
     /**
      * Bit flags for each entity in the universe.
@@ -20,8 +27,12 @@ class ComponentManager {
      */
     public final components : Vector<Components<Any>>;
 
-    public function new(_entities) {
-        entities   = _entities;
+    public function new(_entities)
+    {
+        entities            = _entities;
+        onComponentsAdded   = new Subject();
+        onComponentsRemoved = new Subject();
+
         flags      = new Vector(1024);
         components = createComponentVector();
 
@@ -30,6 +41,20 @@ class ComponentManager {
         }
     }
 
+    public function componentsAdded() : IObservable<Entity>
+    {
+        return onComponentsAdded;
+    }
+
+    public function componentsRemoved() : IObservable<Entity>
+    {
+        return onComponentsRemoved;
+    }
+
+    /**
+     * Get the components table for the specified component ID.
+     * @param _compID Unique component ID.
+     */
     public function getTable(_compID : Int)
     {
         return components[_compID];

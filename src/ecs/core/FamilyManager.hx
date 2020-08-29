@@ -4,22 +4,44 @@ import haxe.ds.Vector;
 import ecs.core.ComponentManager;
 import ecs.macros.FamilyCache;
 
-class FamilyManager {
+using rx.Observable;
+
+class FamilyManager
+{
     final components : ComponentManager;
 
-    var families : Vector<Family>;
+    final families : Vector<Family>;
 
-    public function new(_components) {
+    public function new(_components)
+    {
         components = _components;
-        
-        createFamilyVector();
+        families   = createFamilyVector();
+
+        setupFamilies();
+        components.componentsAdded().subscribeFunction(onComponentsAdded);
+        components.componentsRemoved().subscribeFunction(onComponentsRemoved);
     }
 
-    public function get(_index : Int) {
+    public function get(_index : Int)
+    {
         return families[_index];
     }
 
-    public function count() {
-        return families.length;
+    function onComponentsAdded(_entity : Entity)
+    {
+        for (i in 0...families.length) {
+			final family = families[i];
+			final comps  = components.flags[_entity];
+
+            if (comps.areSet(family.mask))
+            {
+                trace('$_entity added to family $i');
+            }
+		}
+    }
+
+    function onComponentsRemoved(_entity : Entity)
+    {
+        trace('components removed from $_entity');
     }
 }

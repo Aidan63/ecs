@@ -170,5 +170,9 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
         }
     }
 
+    // After we've added all out components publish the entity ID through the components added subject.
+    // TODO : somehow expose this without privateAccess?
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsAdded.onNext($e{ _entity }));
+
     return macro $b{ exprs };
 }

@@ -53,13 +53,18 @@ function getFamilyID(_fields : ReadOnlyArray<FamilyField>)
     }
 }
 
+macro function createFamilyVector()
+{
+    return macro new haxe.ds.Vector($v{ familyIncrementer });
+}
+
 /**
  * Used by `ecs.core.FamiliesManager`.
  * Returns a code block which creates the `faimilies` vector,
  * adds `Family` instances for each family,
  * and generates the bit mask for the components used in it.
  */
-macro function createFamilyVector()
+macro function setupFamilies()
 {
     final creation = [];
 
@@ -75,9 +80,5 @@ macro function createFamilyVector()
         creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, tmpBits)));
     }
 
-    return macro {
-        families = new haxe.ds.Vector($v{ familyIncrementer });
-
-        $b{ creation }
-    }
+    return macro $b{ creation }
 }

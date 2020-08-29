@@ -20,17 +20,17 @@ function getFamily(_names : ReadOnlyArray<ComplexType>) {
 
     trace(concat);
 
-    if (families.exists(concat)) {
-        return families.get(concat);
+    return if (families.exists(concat)) {
+        families.get(concat);
     } else {
         final id = familyIncrementer++;
 
         families.set(concat, id);
 
-        return id;
+        id;
     }
 }
 
-function getFamilyCount() {
-    return familyIncrementer;
+macro function createFamilyVector() {
+    return macro new haxe.ds.Vector($v{ familyIncrementer });
 }

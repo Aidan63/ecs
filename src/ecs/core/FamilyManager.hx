@@ -11,16 +11,10 @@ class FamilyManager {
 
     public function new(_components) {
         components = _components;
-        families   = createVector();
+        families   = createFamilyVector();
     }
 
     public function get(_index : Int) {
         return families[_index];
-    }
-
-    static macro function createVector() {
-        final count = getFamilyCount();
-
-        return macro new haxe.ds.Vector($v{ count });
     }
 }

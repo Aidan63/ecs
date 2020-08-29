@@ -1,8 +1,19 @@
+import ecs.Entity;
 import ecs.System;
+import ecs.Universe;
+import ecs.macros.ComponentsCache;
 
 class Main {
 	static function main() {
-		new SomeSystem1();
+		final universe = new Universe();
+		final system   = new SomeSystem1();
+		final comp     = new SomeType3();
+
+		setComponents(universe.components, new Entity(0), new SomeType1(), SomeType2, comp, comp.inner, getComp(), "hello!");
+	}
+
+	static function getComp() {
+		return new SomeType4();
 	}
 }
 
@@ -21,8 +32,34 @@ class SomeSystem1 extends System {
 	}
 }
 
-@:keep class SomeType1 {}
+@:keep class SomeType1 {
+	public function new() {
+		//
+	}
+}
 
-@:keep class SomeType2 {}
+@:keep class SomeType2 {
+	public function new() {
+		//
+	}
+}
 
-@:keep class SomeType3 {}
+@:keep class SomeType3 {
+	public final inner : SomeType5;
+
+	public function new() {
+		inner = new SomeType5();
+	}
+}
+
+@:keep class SomeType4 {
+	public function new() {
+		//
+	}
+}
+
+@:keep class SomeType5 {
+	public function new() {
+		//
+	}
+}

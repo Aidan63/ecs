@@ -5,7 +5,6 @@
 -D analyzer-optimize
 -p src
 -m Main
---debug
 --dce full
 --macro Safety.safeNavigation('', true)
 

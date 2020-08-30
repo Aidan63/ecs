@@ -1,6 +1,5 @@
 package ecs.macros;
 
-import haxe.macro.ComplexTypeTools;
 import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.Context;
@@ -18,7 +17,8 @@ private var componentIncrementer = 0;
 /**
  * Returns the total number of unique components.
  */
-function getComponentCount() {
+function getComponentCount()
+{
     return componentIncrementer;
 }
 
@@ -27,7 +27,8 @@ function getComponentCount() {
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getComponentID(_type : Type) {
+function getComponentID(_type : Type)
+{
     final name = getTypeName(_type);
 
     return if (components.exists(name))
@@ -53,16 +54,18 @@ macro function createComponentVector()
     return macro new haxe.ds.Vector($v{ componentIncrementer });
 }
 
+/**
+ * Called in the constructor of `ecs.core.ComponentManager` and instantiates a components table for every component used to the `components` vector.
+ */
 macro function setupComponents()
 {
     final creation = [];
 
     for (idx => type in complexTypes)
     {
-        final ct   = type.toComplexType();
-        final expr = macro components.set($v{ idx }, new ecs.Components<$ct>());
+        final ct = type.toComplexType();
 
-        creation.push(expr);
+        creation.push(macro components.set($v{ idx }, new ecs.Components<$ct>()));
     }
 
     return macro $b{ creation };
@@ -75,14 +78,18 @@ macro function setupComponents()
  * @param _entity 
  * @param _components 
  */
-macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>) {
+macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>)
+{
     final exprs = [];
 
-    for (comp in _components) {
-        switch comp.expr {
+    for (comp in _components)
+    {
+        switch comp.expr
+        {
             // Will create a new instance of the constant type
             case EConst(c):
-                switch c {
+                switch c
+                {
                     case CIdent(s):
                         final type = Context.getLocalType().getClass();
                         final vars = Context.getLocalTVars();
@@ -145,7 +152,8 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                             case other:
                         }
                     case basic:
-                        final type = switch basic {
+                        final type = switch basic
+                        {
                             case CInt(_)       : Context.getType('Int');
                             case CFloat(_)     : Context.getType('Float');
                             case CString(_, _) : Context.getType('String');

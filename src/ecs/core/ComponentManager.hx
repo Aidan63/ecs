@@ -25,7 +25,7 @@ class ComponentManager
      * All components stored in this system.
      * Index into the vector with the components ID to get all components of that type.
      */
-    public final components : Vector<Components<Any>>;
+    public final components : Vector<Any>;
 
     public function new(_entities)
     {
@@ -57,14 +57,14 @@ class ComponentManager
      * Get the components table for the specified component ID.
      * @param _compID Unique component ID.
      */
-    public function getTable(_compID : Int)
+    public function getTable<T>(_compID : Int) : Any
     {
         return components[_compID];
     }
 
-    public function set(_entity : Entity, _id : Int, _component : Any)
+    @:generic public function set<T>(_entity : Entity, _id : Int, _component : T)
     {
-        components[_id].set(_entity, _component);
+        (components[_id] : Components<T>).set(_entity, _component);
 
         flags[_entity].set(_id);
     }

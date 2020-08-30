@@ -1,12 +1,17 @@
 package ecs.macros;
 
+import haxe.macro.ComplexTypeTools;
+import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.Context;
+import ecs.macros.Helpers;
 
 using Safety;
 using haxe.macro.Tools;
 
 private final components = new Map<String, Int>();
+
+private final complexTypes = new Array<Type>();
 
 private var componentIncrementer = 0;
 
@@ -22,15 +27,19 @@ function getComponentCount() {
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getComponentID(_ct : ComplexType) {
-    final name = _ct.toString();
+function getComponentID(_type : Type) {
+    final name = getTypeName(_type);
 
-    return if (components.exists(name)) {
+    return if (components.exists(name))
+    {
         components.get(name);
-    } else {
+    }
+    else
+    {
         final id = componentIncrementer++;
 
         components.set(name, id);
+        complexTypes.push(_type);
 
         id;
     }
@@ -39,17 +48,24 @@ function getComponentID(_ct : ComplexType) {
 /**
  * Returns an expression creating a `haxe.ds.Vector` with capacity to store all the seen components.
  */
-macro function createComponentVector() {
-    return macro {
-        final tmp = new haxe.ds.Vector($v{ componentIncrementer });
+macro function createComponentVector()
+{
+    return macro new haxe.ds.Vector($v{ componentIncrementer });
+}
 
-        for (i in 0...tmp.length)
-        {
-            tmp[i] = new ecs.Components<Any>();
-        }
+macro function setupComponents()
+{
+    final creation = [];
 
-        tmp;
+    for (idx => type in complexTypes)
+    {
+        final ct   = type.toComplexType();
+        final expr = macro components.set($v{ idx }, new ecs.Components<$ct>());
+
+        creation.push(expr);
     }
+
+    return macro $b{ creation };
 }
 
 /**
@@ -76,7 +92,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (found != null)
                         {
-                            final name = found.type.toString();
+                            final name = getTypeName(found.type);
                             final cidx = components.get(name);
 
                             if (cidx != null)
@@ -96,7 +112,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (found != null)
                         {
-                            final name = found.t.toString();
+                            final name = getTypeName(found.t);
                             final cidx = components.get(name);
 
                             if (cidx != null)
@@ -112,31 +128,31 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                         }
 
                         // If the above checks fail then treat the ident as a type
-                        switch Context.getType(s) {
-                            case TInst(ref, _):
-                                final type = ref.get();
-                                final cidx = components.get(type.name);
-                                final path = if (type.module != '') {
-                                    name : type.module,
-                                    pack : type.pack,
-                                    sub  : type.name
-                                } else {
-                                    name : type.name,
-                                    pack : type.pack,
-                                    sub  : ''
+                        final type = Context.getType(s);
+                        final cidx = getComponentID(type);
+
+                        switch type
+                        {
+                            case TInst(_.get() => t, _):
+                                // Not sure if this is right, but seems to work...
+                                final path = {
+                                    name : t.module.split('.').pop().or(t.name),
+                                    pack : t.pack,
+                                    sub  : t.name
                                 }
 
                                 exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, new $path()));
                             case other:
                         }
                     case basic:
-                        final name = switch basic {
-                            case CInt(_)       : (macro : Int).toString();
-                            case CFloat(_)     : (macro : Float).toString();
-                            case CString(_, _) : (macro : String).toString();
+                        final type = switch basic {
+                            case CInt(_)       : Context.getType('Int');
+                            case CFloat(_)     : Context.getType('Float');
+                            case CString(_, _) : Context.getType('String');
                             case other: throw 'Unsupported CIdent $other';
                         }
-                        final cidx = components.get(name);
+                        final name = getTypeName(type);
+                        final cidx = getComponentID(type);
 
                         if (cidx != null)
                         {

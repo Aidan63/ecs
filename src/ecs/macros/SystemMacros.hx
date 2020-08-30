@@ -1,6 +1,7 @@
 package ecs.macros;
 
 import haxe.ds.ReadOnlyArray;
+import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Field;
 import haxe.macro.Expr.Position;
@@ -14,6 +15,7 @@ using haxe.macro.Tools;
 typedef FamilyField = {
     final name : String;
     final type : ComplexType;
+    var ?aType : Type;
 }
 
 typedef Family = {
@@ -43,6 +45,8 @@ macro function familyConstruction() : Array<Field> {
         for (i => field in family.types) {
             final ct = field.type;
 
+            field.aType = field.type.toType();
+
             if (!Lambda.exists(output, f -> f.name == field.name)) {
                 output.push({
                     name : field.name,
@@ -50,9 +54,7 @@ macro function familyConstruction() : Array<Field> {
                     kind : FVar(macro : ecs.Components<$ct>),
                 });
 
-                final compID = getComponentID(field.type);
-
-                insertExprIntoFunction(i, added, macro $i{ field.name } = cast components.getTable($v{ compID }));
+                insertExprIntoFunction(i, added, macro $i{ field.name } = cast components.getTable($v{ getComponentID(field.aType) }));
             }
         }
 

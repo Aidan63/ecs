@@ -36,6 +36,8 @@ class ComponentManager
         flags      = new Vector(1024);
         components = createComponentVector();
 
+        setupComponents();
+
         for (i in 0...flags.length) {
             flags[i] = new Bits();
         }

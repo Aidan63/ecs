@@ -74,7 +74,7 @@ macro function setupFamilies()
 
         for (field in fields)
         {
-            creation.push(macro tmpBits.set($v{ getComponentID(field.type) }));
+            creation.push(macro tmpBits.set($v{ getComponentID(field.aType) }));
         }
         
         creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, tmpBits)));

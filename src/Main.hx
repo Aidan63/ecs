@@ -1,6 +1,7 @@
-import ecs.Entity;
 import ecs.System;
 import ecs.Universe;
+import types.SomeType1;
+import types.SomeType3;
 
 using ecs.macros.ComponentsCache;
 
@@ -11,7 +12,7 @@ class Main {
 		final comp     = new SomeType3();
 		final entity   = universe.entities.create();
 
-		universe.components.setComponents(entity, SomeType2, comp, comp.inner, "spr_id", getComp());
+		universe.components.setComponents(entity, SomeType2, comp, "spr_id", getComp());
 
 		system.onAdded();
 		system.update();
@@ -39,26 +40,6 @@ class SomeSystem1 extends System {
 			trace(e);
 			trace(typTable.get(e));
 		}
-	}
-}
-
-@:keep class SomeType1 {
-	public function new() {
-		//
-	}
-}
-
-@:keep class SomeType2 {
-	public function new() {
-		//
-	}
-}
-
-@:keep class SomeType3 {
-	public final inner : SomeType5;
-
-	public function new() {
-		inner = new SomeType5();
 	}
 }
 

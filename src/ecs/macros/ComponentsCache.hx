@@ -182,9 +182,13 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                 // trace(e);
             // Pass construction calls through
             case ENew(t, params):
-                if (components.exists(t.name))
+                final type = Context.getType(t.name);
+                final name = getTypeName(type);
+                final cidx = getComponentID(type);
+
+                if (cidx != null)
                 {
-                    exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ components.get(t.name) }, $e{ comp }));
+                    exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
                 }
                 else
                 {

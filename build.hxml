@@ -4,7 +4,7 @@
 -L haxe-concurrent
 -D analyzer-optimize
 -p src
--m Main
+-m Test
 --dce full
 --macro Safety.safeNavigation('', true)
 

@@ -5,19 +5,18 @@ import types.SomeType3;
 
 using ecs.macros.ComponentsCache;
 
-class Main
+class Test
 {
 	static function main()
 	{
 		final universe = new Universe();
-		final system   = new SomeSystem1(universe.families, universe.components);
 		final comp     = new SomeType3();
 		final entity   = universe.entities.create();
 
-		universe.components.setComponents(entity, SomeType2, comp, "spr_id", getComp());
+		universe.systems.add(new SomeSystem1(universe.families, universe.components));
+		universe.components.setComponents(entity, SomeType2, comp, "spr_id");
 
-		system.onAdded();
-		system.update();
+		universe.systems.update(1 / 60);
 	}
 
 	static function getComp()
@@ -28,7 +27,7 @@ class Main
 
 class SomeSystem1 extends System
 {
-	@:family var movable : { posTable : SomeType1, velTable : SomeType2 };
+	@:family var movable : { posTable : SomeType1, velTable : SomeType2, world : SomeType4 };
 
 	@:family var drawable : { posTable : SomeType1, sprTable : String };
 
@@ -40,7 +39,7 @@ class SomeSystem1 extends System
 		trace(velTable);
 	}
 
-	override public function update()
+	override public function update(_dt : Float)
 	{
 		for (e in other)
 		{

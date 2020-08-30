@@ -44,11 +44,26 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
-    for (family in extractFamilies(families))
+    final extracted = extractFamilies(families);
+
+    // First pass over the extracted families we define a new family field in the system for that type.
+    // We also add a call to get that family from the world at the top of the `onAdded` function.
+    for (idx => family in extracted)
     {
-        // For every field which was found in the family anon object create a Components<T> variable with that field name.
-        // These allow you to fetch the component object for a given entity.
-        for (i => field in family.types)
+        output.push({
+            name : family.name,
+            pos  : Context.currentPos(),
+            kind : FVar(macro : ecs.Family)
+        });
+
+        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ getFamilyID(family.types) }));
+    }
+
+    // For every field which was found in the family anon object create a Components<T> variable with that field name.
+    // These allow you to fetch the component object for a given entity.
+    for (family in extracted)
+    {
+        for (idx => field in family.types)
         {
             final ct = field.type;
 
@@ -62,19 +77,9 @@ macro function familyConstruction() : Array<Field>
                     kind : FVar(macro : ecs.Components<$ct>),
                 });
 
-                insertExprIntoFunction(i, added, macro $i{ field.name } = cast components.getTable($v{ getComponentID(field.aType) }));
+                insertExprIntoFunction(extracted.length + idx, added, macro $i{ field.name } = cast components.getTable($v{ getComponentID(field.aType) }));
             }
         }
-
-        // Create a family field for each family anon object.
-        // This allows you to iterate over all entities with the components in that family.
-        output.push({
-            name : family.name,
-            pos  : Context.currentPos(),
-            kind : FVar(macro : ecs.Family)
-        });
-
-        insertExprIntoFunction(0, added, macro $i{ family.name } = families.get($v{ getFamilyID(family.types) }));
     }
 
     return output;

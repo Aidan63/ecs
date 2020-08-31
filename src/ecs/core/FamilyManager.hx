@@ -33,7 +33,7 @@ class FamilyManager
 			final family = families[i];
 			final comps  = components.flags[_entity];
 
-            if (comps.areSet(family.mask))
+            if (comps.areSet(family.componentsMask))
             {
                 family.add(_entity);
             }

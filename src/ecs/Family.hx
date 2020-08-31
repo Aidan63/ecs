@@ -2,17 +2,22 @@ package ecs;
 
 import bits.Bits;
 
-class Family {
+class Family
+{
     public final id : Int;
 
-    public final mask : Bits;
+    public final componentsMask : Bits;
+
+    public final resourcesMask : Bits;
 
     final entities : Array<Entity>;
 
-    public function new(_id, _mask) {
-        id       = _id;
-        mask     = _mask;
-        entities = [];
+    public function new(_id, _cmpMask, _resMask)
+    {
+        id             = _id;
+        componentsMask = _cmpMask;
+        resourcesMask  = _resMask;
+        entities       = [];
     }
 
     public function add(_entity)

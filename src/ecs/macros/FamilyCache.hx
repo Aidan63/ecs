@@ -1,22 +1,22 @@
 package ecs.macros;
 
+import ecs.macros.ResourceCache;
 import ecs.macros.ComponentsCache;
-import ecs.macros.SystemMacros.FamilyField;
+import ecs.macros.SystemMacros.Family;
 import haxe.ds.ReadOnlyArray;
-import haxe.macro.Context;
 import haxe.macro.Expr;
 
 using haxe.macro.ComplexTypeTools;
 
 /**
- * Map of family IDs keyed by concatenated type names which compose that family.
+ * Map of family IDs keyed by concatenated component types which compose that family.
  */
 private final familyIDs = new Map<String, Int>();
 
 /**
  * Array of all fields in a family. Index by the family ID.
  */
-private final familyFields = new Array<ReadOnlyArray<FamilyField>>();
+private final familyFields = new Array<Family>();
 
 /**
  * Current family counter. Incremented each time a new family is encountered.
@@ -27,13 +27,13 @@ private var familyIncrementer = 0;
  * Given an array of family fields returns the associated integer ID.
  * @param _fields Array of types in the family.
  */
-function getFamilyID(_fields : ReadOnlyArray<FamilyField>)
+function getFamilyID(_family : Family)
 {
     final buffer = new StringBuf();
 
-    for (field in _fields)
+    for (comp in _family.components)
     {
-        buffer.add(field.type.toString());
+        buffer.add(comp.type.toString());
     }
 
     final concat = buffer.toString();
@@ -47,7 +47,7 @@ function getFamilyID(_fields : ReadOnlyArray<FamilyField>)
         final id = familyIncrementer++;
 
         familyIDs.set(concat, id);
-        familyFields.push(_fields);
+        familyFields.push(_family);
 
         id;
     }
@@ -59,25 +59,32 @@ macro function createFamilyVector()
 }
 
 /**
- * Used by `ecs.core.FamiliesManager`.
- * Returns a code block which creates the `faimilies` vector,
- * adds `Family` instances for each family,
- * and generates the bit mask for the components used in it.
+ * Used by `ecs.core.FamiliesManager`, returns a code block which populates the `faimilies` vectors.
+ * Adds an `ecs.Family` instance for each family, generating a bit mask for the components and resources requested by it.
  */
 macro function setupFamilies()
 {
     final creation = [];
 
-    for (idx => fields in familyFields)
+    for (idx => family in familyFields)
     {
-        creation.push(macro final tmpBits = new bits.Bits($v{ getComponentCount() }));
+        // Create a bit flag set for all components in this family.
+        creation.push(macro final cmpBits = new bits.Bits($v{ getComponentCount() }));
 
-        for (field in fields)
+        for (field in family.components)
         {
-            creation.push(macro tmpBits.set($v{ getComponentID(field.aType) }));
+            creation.push(macro cmpBits.set($v{ field.uID }));
+        }
+
+        // Create a bit flag set for all resources in this family.
+        creation.push(macro final resBits = new bits.Bits($v{ getResourceCount() }));
+
+        for (field in family.resources)
+        {
+            creation.push(macro resBits.set($v{ field.uID }));
         }
         
-        creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, tmpBits)));
+        creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits)));
     }
 
     return macro $b{ creation }

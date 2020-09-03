@@ -17,6 +17,12 @@ class Test
 		universe.components.setComponents(entity, SomeType2, comp, "spr_id");
 
 		universe.systems.update(1 / 60);
+
+		universe.components.removeComponents(entity, SomeType3);
+
+		universe.systems.update(1 / 60);
+
+		trace('done');
 	}
 
 	static function getComp()

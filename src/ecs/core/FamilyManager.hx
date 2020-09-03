@@ -29,11 +29,11 @@ class FamilyManager
 
     function onComponentsAdded(_entity : Entity)
     {
-        for (i in 0...families.length) {
-			final family = families[i];
-			final comps  = components.flags[_entity];
+        final compFlags = components.flags[_entity];
 
-            if (comps.areSet(family.componentsMask))
+        for (family in families)
+        {
+            if (compFlags.areSet(family.componentsMask))
             {
                 family.add(_entity);
             }
@@ -42,6 +42,14 @@ class FamilyManager
 
     function onComponentsRemoved(_entity : Entity)
     {
-        trace('components removed from $_entity');
+        final compFlags = components.flags[_entity];
+
+        for (family in families)
+        {          
+            if (!compFlags.areSet(family.componentsMask))
+            {
+                family.remove(_entity);
+            }
+        }
     }
 }

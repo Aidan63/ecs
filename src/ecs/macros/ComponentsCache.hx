@@ -71,6 +71,47 @@ macro function setupComponents()
     return macro $b{ creation };
 }
 
+macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>)
+{
+    final exprs = [];
+
+    for (comp in _components)
+    {
+        switch comp.expr
+        {
+            case EConst(c):
+                switch c
+                {
+                    case CIdent(s):
+                        // If the above checks fail then treat the ident as a type
+                        final type = Context.getType(s);
+                        final cidx = getComponentID(type);
+
+                        switch type
+                        {
+                            case TInst(_.get() => t, _):
+                                // Not sure if this is right, but seems to work...
+                                final path = {
+                                    name : t.module.split('.').pop().or(t.name),
+                                    pack : t.pack,
+                                    sub  : t.name
+                                }
+
+                                exprs.push(macro $e{ _manager }.remove($e{ _entity }, $v{ cidx }));
+                            case other:
+                        }
+                    case other:
+                }
+            case other:
+                //
+        }
+    }
+
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsRemoved.onNext($e{ _entity }));
+
+    return macro $b{ exprs };
+}
+
 /**
  * Adds the specified components to the provided entity through the component manager.
  * Many types of expressions are accepted, TODO : Document them.

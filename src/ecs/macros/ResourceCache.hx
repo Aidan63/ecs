@@ -50,8 +50,6 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
 {
     final exprs = [];
 
-    trace(_resources);
-
     for (resource in _resources)
     {
         switch resource.expr
@@ -85,4 +83,63 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
     exprs.push(macro @:privateAccess $e{ _manager }.onResourcesAdded.onNext(rx.Unit.unit));
 
     return macro $b{ exprs };
+}
+
+macro function removeResources(_manager : ExprOf<ecs.core.ResourceManager>, _resources : Array<Expr>)
+{
+    final exprs = [];
+
+    for (resource in _resources)
+    {
+        switch resource.expr
+        {
+            case EConst(c):
+                switch c
+                {
+                    case CIdent(s):
+                        final type = Context.getType(s);
+                        final ridx = getResourceID(type);
+
+                        switch type
+                        {
+                            case TInst(_.get() => t, _):
+                                // Not sure if this is right, but seems to work...
+                                final path = {
+                                    name : t.module.split('.').pop().or(t.name),
+                                    pack : t.pack,
+                                    sub  : t.name
+                                }
+
+                                exprs.push(macro $e{ _manager }.remove($v{ ridx }));
+                            case other:
+                        }
+                    case _:
+                }
+            case _:
+        }
+    }
+
+    exprs.push(macro @:privateAccess $e{ _manager }.onResourcesRemoved.onNext(rx.Unit.unit));
+
+    return macro $b{ exprs };
+}
+
+macro function getByType(_manager : ExprOf<ecs.core.ResourceManager>, _resource : Expr)
+{
+    switch _resource.expr
+    {
+        case EConst(c):
+            switch c
+            {
+                case CIdent(s):
+                    final type = Context.getType(s);
+                    final cidx = getResourceID(type);
+
+                    return macro $e{ _manager }.get($v{ cidx }, $e{ _resource });
+                case _:
+            }
+        case _:
+    }
+
+    throw 'Expect an EConst(CIdent) expression';
 }

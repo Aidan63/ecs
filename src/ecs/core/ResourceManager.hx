@@ -34,7 +34,7 @@ class ResourceManager
         return onResourcesRemoved;
     }
 
-    public function get<T>(_idx : Int, _type : Class<T>) : T
+    @:generic public function get<T>(_idx : Int, _type : Class<T>) : T
     {
         return resources[_idx];
     }

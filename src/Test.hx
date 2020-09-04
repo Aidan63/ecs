@@ -14,13 +14,15 @@ class Test
 		final comp     = new SomeType3();
 		final entity   = universe.entities.create();
 
-		universe.systems.add(new SomeSystem1(universe.families, universe.components));
+		universe.systems.add(new SomeSystem1(universe.families, universe.components, universe.resources));
 		universe.components.setComponents(entity, SomeType2, comp, "spr_id");
 		universe.resources.setResources(SomeType4, SomeType5);
 
 		universe.systems.update(1 / 60);
 
 		universe.components.removeComponents(entity, SomeType3);
+
+		universe.resources.removeResources(SomeType4);
 
 		universe.systems.update(1 / 60);
 
@@ -57,6 +59,7 @@ class SomeSystem1 extends System
 		{
 			trace(e);
 			trace(typTable.get(e));
+			trace(resources.getByType(SomeType4));
 		}
 	}
 }

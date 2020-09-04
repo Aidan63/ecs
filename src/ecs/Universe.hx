@@ -20,6 +20,6 @@ class Universe
         components = new ComponentManager(entities);
         resources  = new ResourceManager();
         families   = new FamilyManager(components, resources);
-        systems    = new SystemManager(components, families);
+        systems    = new SystemManager(components, resources, families);
     }
 }

@@ -1,5 +1,6 @@
 package ecs;
 
+import ecs.core.ResourceManager;
 import ecs.core.FamilyManager;
 import ecs.core.ComponentManager;
 
@@ -9,10 +10,13 @@ import ecs.core.ComponentManager;
 	
 	final components : ComponentManager;
 
-	public function new(_families, _components)
+	final resources : ResourceManager;
+
+	public function new(_families, _components, _resources)
 	{
 		families   = _families;
 		components = _components;
+		resources  = _resources;
 	}
 
 	public function onAdded()

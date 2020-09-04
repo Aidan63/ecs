@@ -4,13 +4,16 @@ class SystemManager
 {
     final components : ComponentManager;
 
+    final resources : ResourceManager;
+
     final families : FamilyManager;
 
     final active : Array<System>;
 
-    public function new(_components, _families)
+    public function new(_components, _resources, _families)
     {
         components = _components;
+        resources  = _resources;
         families   = _families;
         active     = [];
     }

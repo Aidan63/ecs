@@ -70,7 +70,7 @@ class FamilyManager
         }
     }
 
-    function onResourcesRemoved()
+    function onResourcesRemoved(_)
     {
         for (family in families)
         {

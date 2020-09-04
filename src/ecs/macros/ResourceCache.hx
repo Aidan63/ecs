@@ -1,6 +1,8 @@
 package ecs.macros;
 
 import haxe.macro.Type;
+import haxe.macro.Expr;
+import haxe.macro.Context;
 import ecs.macros.Helpers;
 
 using Safety;
@@ -42,4 +44,45 @@ function getResourceID(_type : Type)
 
         id;
     }
+}
+
+macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resources : Array<Expr>)
+{
+    final exprs = [];
+
+    trace(_resources);
+
+    for (resource in _resources)
+    {
+        switch resource.expr
+        {
+            case EConst(c):
+                switch c
+                {
+                    case CIdent(s):
+                        final type = Context.getType(s);
+                        final cidx = getResourceID(type);
+
+                        switch type
+                        {
+                            case TInst(_.get() => t, _):
+                                // Not sure if this is right, but seems to work...
+                                final path = {
+                                    name : t.module.split('.').pop().or(t.name),
+                                    pack : t.pack,
+                                    sub  : t.name
+                                }
+
+                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, new $path()));
+                            case _:
+                        }
+                    case _:
+                }
+            case _:
+        }
+    }
+
+    exprs.push(macro @:privateAccess $e{ _manager }.onResourcesAdded.onNext(rx.Unit.unit));
+
+    return macro $b{ exprs };
 }

@@ -4,6 +4,7 @@ import types.SomeType1;
 import types.SomeType3;
 
 using ecs.macros.ComponentsCache;
+using ecs.macros.ResourceCache;
 
 class Test
 {
@@ -15,6 +16,7 @@ class Test
 
 		universe.systems.add(new SomeSystem1(universe.families, universe.components));
 		universe.components.setComponents(entity, SomeType2, comp, "spr_id");
+		universe.resources.setResources(SomeType4, SomeType5);
 
 		universe.systems.update(1 / 60);
 

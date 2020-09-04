@@ -8,6 +8,7 @@
 --dce full
 --macro Safety.safeNavigation('', true)
 
-#--interp
+--debug
+--interp
 #--js bin/out.js
---cpp bin/cpp
+#--cpp bin/cpp

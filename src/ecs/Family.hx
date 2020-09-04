@@ -11,6 +11,8 @@ class Family
 
     public final resourcesMask : Bits;
 
+    public var hasResources : Bool;
+
     final entities : SparseSet;
 
     public function new(_id, _cmpMask, _resMask)
@@ -18,6 +20,7 @@ class Family
         id             = _id;
         componentsMask = _cmpMask;
         resourcesMask  = _resMask;
+        hasResources   = if (resourcesMask.isEmpty()) true else false;
         entities       = new SparseSet(1024);
     }
 
@@ -36,7 +39,7 @@ class Family
 
     public function iterator()
     {
-        return new FamilyIterator(entities);
+        return new FamilyIterator(entities, hasResources);
     }
 }
 
@@ -44,17 +47,20 @@ private class FamilyIterator
 {
     final set : SparseSet;
 
+    final hasResources : Bool;
+
     var idx : Int;
 
-    public function new(_set)
+    public function new(_set, _hasResources)
     {
-        set = _set;
-        idx = 0;
+        set          = _set;
+        hasResources = _hasResources;
+        idx          = 0;
     }
 
     public function hasNext()
     {
-        return idx < set.size();
+        return hasResources && idx < set.size();
     }
 
     public function next()

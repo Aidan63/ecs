@@ -16,16 +16,16 @@ class ComponentManager
     final onComponentsRemoved : Subject<Entity>;
 
     /**
+     * All components stored in this system.
+     * Index into the vector with the components ID to get all components of that type.
+     */
+    final components : Vector<Any>;
+
+    /**
      * Bit flags for each entity in the universe.
      * If a bit is set then it has the component of that index / id.
      */
     public final flags : Vector<Bits>;
-
-    /**
-     * All components stored in this system.
-     * Index into the vector with the components ID to get all components of that type.
-     */
-    public final components : Vector<Any>;
 
     public function new(_entities)
     {

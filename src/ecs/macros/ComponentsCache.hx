@@ -80,7 +80,7 @@ macro function setupComponents()
  */
 macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>)
 {
-    final exprs = [];
+    final exprs = [ macro final ecsEntityTemp = $e{ _entity } ];
 
     for (comp in _components)
     {
@@ -104,7 +104,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
+                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
 
                                 continue;
                             }
@@ -124,7 +124,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                             if (cidx != null)
                             {
-                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
+                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
     
                                 continue;
                             }
@@ -148,7 +148,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                                     sub  : t.name
                                 }
 
-                                exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, new $path()));
+                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, new $path()));
                             case other:
                         }
                     case basic:
@@ -164,7 +164,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (cidx != null)
                         {
-                            exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
+                            exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
                         }
                         else
                         {
@@ -188,7 +188,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                 if (cidx != null)
                 {
-                    exprs.push(macro $e{ _manager }.set($e{ _entity }, $v{ cidx }, $e{ comp }));
+                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
                 }
                 else
                 {
@@ -200,14 +200,14 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
     // After we've added all out components publish the entity ID through the components added subject.
     // TODO : somehow expose this without privateAccess?
-    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsAdded.onNext($e{ _entity }));
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsAdded.onNext(ecsEntityTemp));
 
     return macro $b{ exprs };
 }
 
 macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _entity : ExprOf<ecs.Entity>, _components : Array<Expr>)
 {
-    final exprs = [];
+    final exprs = [ macro final ecsEntityTemp = $e{ _entity } ];
 
     for (comp in _components)
     {
@@ -231,7 +231,7 @@ macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _e
                                     sub  : t.name
                                 }
 
-                                exprs.push(macro $e{ _manager }.remove($e{ _entity }, $v{ cidx }));
+                                exprs.push(macro $e{ _manager }.remove(ecsEntityTemp, $v{ cidx }));
                             case other:
                         }
                     case other:
@@ -241,7 +241,7 @@ macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _e
         }
     }
 
-    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsRemoved.onNext($e{ _entity }));
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsRemoved.onNext(ecsEntityTemp));
 
     return macro $b{ exprs };
 }

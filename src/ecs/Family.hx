@@ -26,7 +26,10 @@ class Family
 
     public function add(_entity)
     {
-        entities.insert(_entity);
+        if (!entities.has(_entity))
+        {
+            entities.insert(_entity);
+        }
     }
 
     public function remove(_entity)

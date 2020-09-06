@@ -4,8 +4,9 @@ import rx.observables.IObservable;
 import rx.Subject;
 import bits.Bits;
 import haxe.ds.Vector;
-
 import ecs.macros.ComponentsCache;
+
+using rx.Observable;
 
 class ComponentManager
 {
@@ -38,9 +39,12 @@ class ComponentManager
 
         setupComponents();
 
-        for (i in 0...flags.length) {
+        for (i in 0...flags.length)
+        {
             flags[i] = new Bits();
         }
+
+        entities.entityRemoved().subscribeFunction(removeAllComponents);
     }
 
     public function componentsAdded() : IObservable<Entity>
@@ -72,5 +76,12 @@ class ComponentManager
     public function remove(_entity : Entity, _id : Int)
     {
         flags[_entity].unset(_id);
+    }
+
+    function removeAllComponents(_entity : Entity)
+    {
+        flags[_entity].clear();
+
+        onComponentsRemoved.onNext(_entity);
     }
 }

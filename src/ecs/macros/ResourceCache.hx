@@ -58,6 +58,50 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                 switch c
                 {
                     case CIdent(s):
+                        final type = Context.getLocalType().getClass();
+                        final vars = Context.getLocalTVars();
+
+                        // Check if this identifier is a member or static field type.
+                        final found = type.findField(s).or(type.findField(s, true));
+
+                        if (found != null)
+                        {
+                            final name = getTypeName(found.type);
+                            final cidx = resources.get(name);
+
+                            if (cidx != null)
+                            {
+                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
+
+                                continue;
+                            }
+                            else
+                            {
+                                Context.error('Component $name is not used in any families', Context.currentPos());
+                            }
+                        }
+
+                        // Check if this identifier is a local var.
+                        final found = vars.get(s);
+
+                        if (found != null)
+                        {
+                            final name = getTypeName(found.t);
+                            final cidx = resources.get(name);
+
+                            if (cidx != null)
+                            {
+                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
+    
+                                continue;
+                            }
+                            else
+                            {
+                                Context.error('Component $name is not used in any families', Context.currentPos());
+                            }
+                        }
+
+                        // If the above checks fail then treat the ident as a type
                         final type = Context.getType(s);
                         final cidx = getResourceID(type);
 
@@ -135,7 +179,10 @@ macro function getByType(_manager : ExprOf<ecs.core.ResourceManager>, _resource 
                     final type = Context.getType(s);
                     final cidx = getResourceID(type);
 
-                    return macro $e{ _manager }.get($v{ cidx }, $e{ _resource });
+                    return {
+                        expr : ECheckType(macro $e{ _manager }.get($v{ cidx }), type.toComplexType()),
+                        pos  : Context.currentPos()
+                    }
                 case _:
             }
         case _:

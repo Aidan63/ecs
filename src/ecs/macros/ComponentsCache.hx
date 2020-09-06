@@ -95,7 +95,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                         final vars = Context.getLocalTVars();
 
                         // Check if this identifier is a field type.
-                        final found = type.findField(s, true);
+                        final found = type.findField(s).or(type.findField(s, true));
 
                         if (found != null)
                         {

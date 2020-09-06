@@ -1,20 +1,24 @@
 package ecs;
 
-import ecs.core.ResourceManager;
+import ecs.core.EntityManager;
 import ecs.core.FamilyManager;
+import ecs.core.ResourceManager;
 import ecs.core.ComponentManager;
 
 @:autoBuild(ecs.macros.SystemMacros.familyConstruction()) class System
 {
 	final families : FamilyManager;
+
+	final entities : EntityManager;
 	
 	final components : ComponentManager;
 
 	final resources : ResourceManager;
 
-	public function new(_families, _components, _resources)
+	public function new(_families, _entities, _components, _resources)
 	{
 		families   = _families;
+		entities   = _entities;
 		components = _components;
 		resources  = _resources;
 	}

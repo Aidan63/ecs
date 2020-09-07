@@ -178,11 +178,9 @@ macro function getByType(_manager : ExprOf<ecs.core.ResourceManager>, _resource 
                 case CIdent(s):
                     final type = Context.getType(s);
                     final cidx = getResourceID(type);
+                    final ct   = type.toComplexType();
 
-                    return {
-                        expr : ECheckType(macro $e{ _manager }.get($v{ cidx }), type.toComplexType()),
-                        pos  : Context.currentPos()
-                    }
+                    return macro ($e{ _manager }.get($v{ cidx }) : $ct);
                 case _:
             }
         case _:

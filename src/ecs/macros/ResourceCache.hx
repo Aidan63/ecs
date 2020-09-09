@@ -27,22 +27,25 @@ function getResourceCount()
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getResourceID(_type : Type)
+function getResourceID(_ct : ComplexType)
 {
-    final name = getTypeName(_type);
+    final name = _ct.toString();
 
-    return if (resources.exists(name))
+    if (resources.exists(name))
     {
-        resources.get(name);
+        return resources.get(name);
     }
-    else
+
+    throw '$name has not been registered as a resource';
+}
+
+function registerResource(_ct : ComplexType)
+{
+    final name = _ct.toString();
+
+    if (!resources.exists(name))
     {
-        final id = resourceIncrementer++;
-
-        resources.set(name, id);
-        complexTypes.push(_type);
-
-        id;
+        resources.set(name, resourceIncrementer++);
     }
 }
 
@@ -54,70 +57,57 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
     {
         switch resource.expr
         {
-            case EConst(c):
-                switch c
+            case EConst(CIdent(s)):
+                final type = Context.getLocalType().getClass();
+                final vars = Context.getLocalTVars();
+
+                // Check if this identifier is a member or static field type.
+                final found = type.findField(s).or(type.findField(s, true));
+
+                if (found != null)
                 {
-                    case CIdent(s):
-                        final type = Context.getLocalType().getClass();
-                        final vars = Context.getLocalTVars();
+                    final name = getTypeName(found.type);
+                    final cidx = resources.get(name);
 
-                        // Check if this identifier is a member or static field type.
-                        final found = type.findField(s).or(type.findField(s, true));
+                    if (cidx != null)
+                    {
+                        exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
 
-                        if (found != null)
-                        {
-                            final name = getTypeName(found.type);
-                            final cidx = resources.get(name);
+                        continue;
+                    }
+                    else
+                    {
+                        Context.error('Component $name is not used in any families', Context.currentPos());
+                    }
+                }
 
-                            if (cidx != null)
-                            {
-                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
+                // Check if this identifier is a local var.
+                final found = vars.get(s);
 
-                                continue;
-                            }
-                            else
-                            {
-                                Context.error('Component $name is not used in any families', Context.currentPos());
-                            }
-                        }
+                if (found != null)
+                {
+                    final name = getTypeName(found.t);
+                    final cidx = resources.get(name);
 
-                        // Check if this identifier is a local var.
-                        final found = vars.get(s);
+                    if (cidx != null)
+                    {
+                        exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
 
-                        if (found != null)
-                        {
-                            final name = getTypeName(found.t);
-                            final cidx = resources.get(name);
+                        continue;
+                    }
+                    else
+                    {
+                        Context.error('Component $name is not used in any families', Context.currentPos());
+                    }
+                }
 
-                            if (cidx != null)
-                            {
-                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
-    
-                                continue;
-                            }
-                            else
-                            {
-                                Context.error('Component $name is not used in any families', Context.currentPos());
-                            }
-                        }
+                // If the above checks fail then treat the ident as a type
+                final type = Context.getType(s).toComplexType();
+                final cidx = getResourceID(type);
 
-                        // If the above checks fail then treat the ident as a type
-                        final type = Context.getType(s);
-                        final cidx = getResourceID(type);
-
-                        switch type
-                        {
-                            case TInst(_.get() => t, _):
-                                // Not sure if this is right, but seems to work...
-                                final path = {
-                                    name : t.module.split('.').pop().or(t.name),
-                                    pack : t.pack,
-                                    sub  : t.name
-                                }
-
-                                exprs.push(macro $e{ _manager }.insert($v{ cidx }, new $path()));
-                            case _:
-                        }
+                switch type
+                {
+                    case TPath(tp): exprs.push(macro $e{ _manager }.insert($v{ cidx }, new $tp()));
                     case _:
                 }
             case _:
@@ -137,28 +127,11 @@ macro function removeResources(_manager : ExprOf<ecs.core.ResourceManager>, _res
     {
         switch resource.expr
         {
-            case EConst(c):
-                switch c
-                {
-                    case CIdent(s):
-                        final type = Context.getType(s);
-                        final ridx = getResourceID(type);
+            case EConst(CIdent(s)):
+                final type = Context.getType(s).toComplexType();
+                final ridx = getResourceID(type);
 
-                        switch type
-                        {
-                            case TInst(_.get() => t, _):
-                                // Not sure if this is right, but seems to work...
-                                final path = {
-                                    name : t.module.split('.').pop().or(t.name),
-                                    pack : t.pack,
-                                    sub  : t.name
-                                }
-
-                                exprs.push(macro $e{ _manager }.remove($v{ ridx }));
-                            case other:
-                        }
-                    case _:
-                }
+                exprs.push(macro $e{ _manager }.remove($v{ ridx }));
             case _:
         }
     }
@@ -172,17 +145,11 @@ macro function getByType(_manager : ExprOf<ecs.core.ResourceManager>, _resource 
 {
     switch _resource.expr
     {
-        case EConst(c):
-            switch c
-            {
-                case CIdent(s):
-                    final type = Context.getType(s);
-                    final cidx = getResourceID(type);
-                    final ct   = type.toComplexType();
+        case EConst(CIdent(s)):
+            final type = Context.getType(s).toComplexType();
+            final cidx = getResourceID(type);
 
-                    return macro ($e{ _manager }.get($v{ cidx }) : $ct);
-                case _:
-            }
+            return macro ($e{ _manager }.get($v{ cidx }) : $type);
         case _:
     }
 

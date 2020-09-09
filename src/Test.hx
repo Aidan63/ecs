@@ -37,15 +37,14 @@ class Test
 
 class SomeSystem1 extends System
 {
-	@:family var movable : { posTable : SomeType1, velTable : SomeType2 }
+	@:fastFamily var movable = { posTable : SomeType1, velTable : SomeType2 };
 
-	@:family var drawable : { posTable : SomeType1, sprTable : String };
+	@:fastFamily var drawable = { posTable : SomeType1, sprTable : String };
 
-	@:family var other : { typTable : SomeType3 };
-
-	@:resource var world : SomeType4;
-
-	@:resource var input : SomeType5;
+	@:fullFamily var other = {
+		requires : { typTable : SomeType3 },
+		resources : [ SomeType4, SomeType5 ]
+	};
 
 	override public function onAdded()
 	{

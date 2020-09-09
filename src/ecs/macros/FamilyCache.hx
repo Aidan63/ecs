@@ -81,7 +81,7 @@ macro function setupFamilies()
 
         for (field in family.resources)
         {
-            creation.push(macro resBits.set($v{ getResourceID(field.ct) }));
+            creation.push(macro resBits.set($v{ field.uID }));
         }
         
         creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits)));

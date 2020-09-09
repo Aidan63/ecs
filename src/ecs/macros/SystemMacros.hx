@@ -1,10 +1,7 @@
 package ecs.macros;
 
 import haxe.ds.ReadOnlyArray;
-import haxe.macro.Type;
 import haxe.macro.Expr;
-import haxe.macro.Expr.Field;
-import haxe.macro.Expr.Position;
 import haxe.macro.Context;
 import ecs.ds.Result;
 import ecs.macros.FamilyCache;
@@ -18,13 +15,12 @@ using haxe.macro.Tools;
 typedef FamilyField = {
     final name : String;
     final type : String;
-    var ?aType : Type;
     var ?uID : Int;
 }
 
 typedef FamilyType = {
     final name : String;
-    var ?ct : ComplexType;
+    var ?uID : Int;
 }
 
 typedef FamilyError = {
@@ -106,15 +102,14 @@ macro function familyConstruction() : Array<Field>
     {
         for (resource in family.resources)
         {
-            registerResource(resource.ct = Context.getType(resource.name).toComplexType());
+            resource.uID = registerResource(Context.getType(resource.name).toComplexType());
         }
 
         for (idx => field in family.components)
         {
-            field.aType = Context.getType(field.type);
-            field.uID   = getComponentID(field.aType);
+            final ct = Context.getType(field.type).toComplexType();
 
-            final ct = field.aType.toComplexType();
+            field.uID = getComponentID(ct);
 
             // Don't add multiple table fetches for components across multiple families in the same system.
             // Should probably have some better checking system.

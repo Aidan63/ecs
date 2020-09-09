@@ -1,16 +1,12 @@
 package ecs.macros;
 
-import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.Context;
-import ecs.macros.Helpers;
 
 using Safety;
 using haxe.macro.Tools;
 
 private final resources = new Map<String, Int>();
-
-private final complexTypes = new Array<Type>();
 
 private var resourceIncrementer = 0;
 
@@ -43,9 +39,17 @@ function registerResource(_ct : ComplexType)
 {
     final name = _ct.toString();
 
-    if (!resources.exists(name))
+    return if (!resources.exists(name))
     {
-        resources.set(name, resourceIncrementer++);
+        final id = resourceIncrementer++;
+
+        resources.set(name, id);
+
+        id;
+    }
+    else
+    {
+        resources.get(name);
     }
 }
 
@@ -61,13 +65,13 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                 final type = Context.getLocalType().getClass();
                 final vars = Context.getLocalTVars();
 
-                // Check if this identifier is a member or static field type.
+                // Check if this identifier is a member field or static field.
                 final found = type.findField(s).or(type.findField(s, true));
 
                 if (found != null)
                 {
-                    final name = getTypeName(found.type);
-                    final cidx = resources.get(name);
+                    final ct   = found.type.toComplexType();
+                    final cidx = getResourceID(ct);
 
                     if (cidx != null)
                     {
@@ -77,7 +81,7 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                     }
                     else
                     {
-                        Context.error('Component $name is not used in any families', Context.currentPos());
+                        Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
                     }
                 }
 
@@ -86,8 +90,8 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
 
                 if (found != null)
                 {
-                    final name = getTypeName(found.t);
-                    final cidx = resources.get(name);
+                    final ct   = found.t.toComplexType();
+                    final cidx = getResourceID(ct);
 
                     if (cidx != null)
                     {
@@ -97,7 +101,7 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                     }
                     else
                     {
-                        Context.error('Component $name is not used in any families', Context.currentPos());
+                        Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
                     }
                 }
 

@@ -93,7 +93,7 @@ macro function familyConstruction() : Array<Field>
             kind : FVar(macro : ecs.Family)
         });
 
-        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ getFamilyID(family) }));
+        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ registerFamily(family) }));
     }
 
     // For every field which was found in the family anon object create a Components<T> variable with that field name.

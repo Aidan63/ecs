@@ -4,7 +4,6 @@ import ecs.macros.ResourceCache;
 import ecs.macros.ComponentsCache;
 import ecs.macros.SystemMacros.FamilyDefinition;
 import haxe.macro.Expr;
-import haxe.macro.Context;
 
 using haxe.macro.Tools;
 
@@ -27,7 +26,7 @@ private var familyIncrementer = 0;
  * Given an array of family fields returns the associated integer ID.
  * @param _fields Array of types in the family.
  */
-function getFamilyID(_family : FamilyDefinition)
+function registerFamily(_family : FamilyDefinition)
 {
     final buffer = new StringBuf();
 

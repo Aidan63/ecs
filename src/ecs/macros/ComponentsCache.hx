@@ -1,5 +1,6 @@
 package ecs.macros;
 
+import haxe.ds.Option;
 import haxe.macro.Expr;
 import haxe.macro.Context;
 
@@ -23,7 +24,7 @@ function getComponentCount()
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getComponentID(_type : ComplexType)
+function registerComponent(_type : ComplexType)
 {
     final name = _type.toString();
 
@@ -38,6 +39,26 @@ function getComponentID(_type : ComplexType)
         components.set(name, id);
 
         id;
+    }
+}
+
+/**
+ * Returns the component ID of a complex type.
+ * If the complex type has not been registered as a component `None` is returned.
+ * @param _type Complex type of the component.
+ * @return Option<Int>
+ */
+function getComponentID(_type : ComplexType) : Option<Int>
+{
+    final name = _type.toString();
+
+    return if (components.exists(name))
+    {
+        Some(components.get(name));
+    }
+    else
+    {
+        None;
     }
 }
 
@@ -94,18 +115,16 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (found != null)
                         {
-                            final ct   = found.type.toComplexType();
-                            final cidx = getComponentID(ct);
+                            final ct = found.type.toComplexType();
 
-                            if (cidx != null)
+                            switch getComponentID(ct)
                             {
-                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
+                                case Some(id):
+                                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
 
-                                continue;
-                            }
-                            else
-                            {
-                                Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
+                                    continue;
+                                case None:
+                                    Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                             }
                         }
 
@@ -114,48 +133,53 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
                         if (found != null)
                         {
-                            final ct   = found.t.toComplexType();
-                            final cidx = getComponentID(ct);
+                            final ct = found.t.toComplexType();
 
-                            if (cidx != null)
+                            switch getComponentID(ct)
                             {
-                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
+                                case Some(id):
+                                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
     
-                                continue;
-                            }
-                            else
-                            {
-                                Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
+                                    continue;
+                                case None:
+                                    Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                             }
                         }
 
                         // If the above checks fail then treat the ident as a type
                         final type = Context.getType(s).toComplexType();
-                        final cidx = getComponentID(type);
 
                         switch type
                         {
-                            case TPath(p): exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, new $p()));
+                            case TPath(p):
+                                switch getComponentID(type)
+                                {
+                                    case Some(id):
+                                        exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, new $p()));
+                                    case None:
+                                        Context.warning('Component ${ type.toString() } is not used in any families', comp.pos);
+                                }
                             case other:
                         }
+                        
                     case basic:
                         final type = switch basic
                         {
                             case CInt(_)       : Context.getType('Int');
                             case CFloat(_)     : Context.getType('Float');
                             case CString(_, _) : Context.getType('String');
-                            case other: throw 'Unsupported CIdent $other';
+                            case CRegexp(_, _) : Context.getType('EReg');
+                            case other : throw 'Unsupported CIdent $other';
                         }
-                        final ct   = type.toComplexType();
-                        final cidx = getComponentID(ct);
 
-                        if (cidx != null)
+                        final ct = type.toComplexType();
+
+                        switch getComponentID(ct)
                         {
-                            exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
-                        }
-                        else
-                        {
-                            Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
+                            case Some(id):
+                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                            case None:
+                                Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                         }
                 }
             // Pass field access through
@@ -170,17 +194,15 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
             // Pass construction calls through
             case ENew(t, params):
                 final type = Context.getType(t.name).toComplexType();
-                final cidx = getComponentID(type);
 
-                if (cidx != null)
+                switch getComponentID(type)
                 {
-                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ cidx }, $e{ comp }));
+                    case Some(id):
+                        exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                    case None:
+                        Context.warning('Component ${ type.toString() } is not used in any families', comp.pos);
                 }
-                else
-                {
-                    Context.error('Component ${ type.toString() } is not used in any families', Context.currentPos());
-                }
-            case other: Context.error('Unsupported expression $other', Context.currentPos());
+            case other: Context.fatalError('Unsupported expression $other', comp.pos);
         }
     }
 
@@ -202,9 +224,13 @@ macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _e
             case EConst(CIdent(s)):
                 // If the above checks fail then treat the ident as a type
                 final type = Context.getType(s).toComplexType();
-                final cidx = getComponentID(type);
 
-                exprs.push(macro $e{ _manager }.remove(ecsEntityTemp, $v{ cidx }));
+                switch getComponentID(type)
+                {
+                    case Some(id): exprs.push(macro $e{ _manager }.remove(ecsEntityTemp, $v{ id }));
+                    case None:
+                }
+                
             case other:
                 //
         }

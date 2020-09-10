@@ -32,7 +32,7 @@ function registerFamily(_family : FamilyDefinition)
 
     for (comp in _family.components)
     {
-        buffer.add(comp.type.toString());
+        buffer.add(comp.type);
     }
 
     final concat = buffer.toString();

@@ -109,7 +109,7 @@ macro function familyConstruction() : Array<Field>
         {
             final ct = Context.getType(field.type).toComplexType();
 
-            field.uID = getComponentID(ct);
+            field.uID = registerComponent(ct);
 
             // Don't add multiple table fetches for components across multiple families in the same system.
             // Should probably have some better checking system.
@@ -163,7 +163,7 @@ function getOrCreateOverrideFunction(_name : String, _fields : Array<Field>, _po
 
 /**
  * Inserts an expression into a function block field.
- * @param _pos Position within the existing expression array to insert to.
+ * @param _pos Position within the existing expression array to insert at.
  * @param _field Field to insert in, must be a FFun EBlock field.
  * @param _expr Expression to insert.
  */
@@ -182,8 +182,9 @@ function insertExprIntoFunction(_pos : Int, _field : Field, _expr : Expr)
 }
 
 /**
- * Checks if the provided field contains the @:family meta.
+ * Returns if a field has the provided metadata string.
  * @param _field Field to check.
+ * @param _meta Meta data name.
  */
 function hasMeta(_field : Field, _meta : String)
 {
@@ -203,6 +204,13 @@ function hasMeta(_field : Field, _meta : String)
     return false;
 }
 
+/**
+ * Given a field it will attempt to extract a family definition from just the requested components.
+ * Empty arrays will be used for the resources and exclusions.
+ * An error will be returned if any unexpected expression types are encountered.
+ * @param _field Field to check.
+ * @return Result<FamilyDefinition, String>
+ */
 function extractFastFamily(_field : Field)
 {
     return switch _field.kind
@@ -211,15 +219,17 @@ function extractFastFamily(_field : Field)
             switch expr.expr
             {
                 case EObjectDecl(fields): extractFamilyComponents(fields);
-                case other: Error({ message : 'Unexpected field expression $other', pos : expr.pos });
+                case _: Error({ message : 'Unexpected variable expression ${ expr.toString() }, expected EObjectDecl', pos : expr.pos });
             }
-        case other: Error({ message : 'Unexpected field kind $other', pos : _field.pos });
+        case other: Error({ message : 'Unexpected field kind $other, expected FVar', pos : _field.pos });
     }
 }
 
 /**
- * [Description]
- * @param _field 
+ * Given a field it will attempt to extract a fully defined family from the expression within.
+ * If any part of the definition is missing an empty array will be used in its place.
+ * An error will be returned if any unexpected expression types are encountered.
+ * @param _field Field to check.
  * @return Result<FamilyDefinition, String>
  */
 function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyError>
@@ -260,16 +270,17 @@ function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyErro
                             case Error(error): return Error(error);
                         }
                     });
-                case other: Error({ message : 'Unexpected variable expression ${ other }', pos : expr.pos });
+                case _: Error({ message : 'Unexpected variable expression ${ expr.toString() }, expected EObjectDec', pos : expr.pos });
             }
-        case other: Error({ message : 'Unexpected field kind ${ other }', pos : _field.pos });
+        case other: Error({ message : 'Unexpected field kind ${ other }, expected FVar', pos : _field.pos });
     }
 }
 
 /**
- * Extracts all the CIdent names from an array of object fields.
- * Fields are lexographically ordered by their name.
- * @param _fields 
+ * Extracts all the `EConst(CIdent(_))` names from an array of object fields.
+ * Returned family fields are lexographically ordered by their name.
+ * If any other expressions are found an error is returned.
+ * @param _fields Object fields to search through.
  * @return Result<ReadOnlyArray<FamilyField>, Exception>
  */
 function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
@@ -285,7 +296,7 @@ function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnly
                     name : field.field,
                     type : s
                 });
-            case other: return Error({ message : 'Unexpected expression type $other', pos : field.expr.pos });
+            case _: return Error({ message : 'Unexpected expression ${ field.expr.toString() }, expected EConst(CIdent(_))', pos : field.expr.pos });
         }
     }
 
@@ -308,6 +319,12 @@ function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnly
     return Ok(extracted);
 }
 
+/**
+ * Given an array of expressions it will extract all `EConst(CIdent(_))` names into family types.
+ * If an expression not of that type is found it will return with an error.
+ * @param _exprs Expressions to read.
+ * @return Result<ReadOnlyArray<FamilyType>, FamilyError>
+ */
 function extractFamilyResources(_exprs : Array<Expr>) : Result<ReadOnlyArray<FamilyType>, FamilyError>
 {
     final types = new Array<FamilyType>();

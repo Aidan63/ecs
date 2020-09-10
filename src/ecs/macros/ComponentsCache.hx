@@ -202,7 +202,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                     case None:
                         Context.warning('Component ${ type.toString() } is not used in any families', comp.pos);
                 }
-            case other: Context.error('Unsupported expression $other', comp.pos);
+            case other: Context.error('Unsupported expression ${ comp.toString() }', comp.pos);
         }
     }
 
@@ -234,7 +234,7 @@ macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _e
                 }
                 
             case other:
-                Context.error('Unsupported expression $other', comp.pos);
+                Context.error('Unsupported expression ${ comp.toString() }', comp.pos);
         }
     }
 

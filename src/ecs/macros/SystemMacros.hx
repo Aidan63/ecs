@@ -66,7 +66,7 @@ macro function familyConstruction() : Array<Field>
                         components : data,
                         resources  : []
                     });
-                case Error(error): Context.fatalError(error.message, error.pos);
+                case Error(error): Context.error(error.message, error.pos);
             }
         }
         else if (hasMeta(field, ':fullFamily'))
@@ -74,7 +74,7 @@ macro function familyConstruction() : Array<Field>
             switch extractFullFamily(field)
             {
                 case Ok(data): families.push(data);
-                case Error(error): Context.fatalError(error.message, error.pos);
+                case Error(error): Context.error(error.message, error.pos);
             }
         }
         else

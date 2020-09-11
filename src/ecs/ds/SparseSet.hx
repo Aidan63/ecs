@@ -90,7 +90,7 @@ class SparseSet
      * Get the entity at the provided dense vector location.
      * @param _idx Dense vector index.
      */
-    public function getDense(_idx)
+    public function getDense(_idx : Int)
     {
         return dense[_idx];
     }
@@ -99,7 +99,7 @@ class SparseSet
      * Get the index into the dense vector that the provided entity is stored in.
      * @param _entity Entity to get index of.
      */
-    public function getSparse(_entity)
+    public function getSparse(_entity : Entity)
     {
         return sparse[_entity];
     }

@@ -121,11 +121,11 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                             {
                                 case Some(id):
                                     exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
-
-                                    continue;
                                 case None:
                                     Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                             }
+
+                            continue;
                         }
 
                         // Check if this identifier is a local var.
@@ -139,14 +139,15 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                             {
                                 case Some(id):
                                     exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
-    
-                                    continue;
                                 case None:
                                     Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                             }
+
+                            continue;
                         }
 
                         // If the above checks fail then treat the ident as a type
+
                         final type = Context.getType(s).toComplexType();
 
                         switch type

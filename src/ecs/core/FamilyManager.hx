@@ -2,7 +2,7 @@ package ecs.core;
 
 import haxe.ds.Vector;
 import ecs.core.ComponentManager;
-import ecs.macros.FamilyCache;
+import ecs.macros.FamilyMacros;
 
 using rx.Observable;
 

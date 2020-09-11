@@ -1,73 +1,18 @@
 package ecs.macros;
 
-import haxe.ds.Option;
 import haxe.macro.Expr;
 import haxe.macro.Context;
+import ecs.macros.ComponentCache;
 
 using Safety;
 using haxe.macro.Tools;
-
-private final components = new Map<String, Int>();
-
-private var componentIncrementer = 0;
-
-/**
- * Returns the total number of unique components.
- */
-function getComponentCount()
-{
-    return componentIncrementer;
-}
-
-/**
- * Given a complex type it will return an integer representing that type.
- * If this type has not yet been seen the returned integer is stored for future lookups.
- * @param _ct ComplexType to get ID for.
- */
-function registerComponent(_type : ComplexType)
-{
-    final name = _type.toString();
-
-    return if (components.exists(name))
-    {
-        components.get(name);
-    }
-    else
-    {
-        final id = componentIncrementer++;
-
-        components.set(name, id);
-
-        id;
-    }
-}
-
-/**
- * Returns the component ID of a complex type.
- * If the complex type has not been registered as a component `None` is returned.
- * @param _type Complex type of the component.
- * @return Option<Int>
- */
-function getComponentID(_type : ComplexType) : Option<Int>
-{
-    final name = _type.toString();
-
-    return if (components.exists(name))
-    {
-        Some(components.get(name));
-    }
-    else
-    {
-        None;
-    }
-}
 
 /**
  * Returns an expression creating a `haxe.ds.Vector` with capacity to store all the seen components.
  */
 macro function createComponentVector()
 {
-    return macro new haxe.ds.Vector($v{ componentIncrementer });
+    return macro new haxe.ds.Vector($v{ getComponentCount() });
 }
 
 /**
@@ -77,7 +22,7 @@ macro function setupComponents()
 {
     final creation = [];
 
-    for (name => idx in components)
+    for (name => idx in getComponentMap())
     {
         final ct = Context.getType(name).toComplexType();
 
@@ -183,15 +128,6 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                                 Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                         }
                 }
-            // Pass field access through
-            case EField(e, field):
-                // trace('EField');
-                // trace(e);
-                // trace(field);
-            // Pass function calls through
-            case ECall(e, params):
-                // trace('ECall');
-                // trace(e);
             // Pass construction calls through
             case ENew(t, params):
                 final type = Context.getType(t.name).toComplexType();

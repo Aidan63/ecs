@@ -6,7 +6,7 @@ import haxe.macro.Context;
 import ecs.ds.Result;
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
-import ecs.macros.ComponentsCache;
+import ecs.macros.ComponentCache;
 
 using Lambda;
 using Safety;

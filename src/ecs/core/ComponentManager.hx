@@ -1,10 +1,10 @@
 package ecs.core;
 
-import rx.observables.IObservable;
-import rx.Subject;
-import bits.Bits;
 import haxe.ds.Vector;
-import ecs.macros.ComponentsCache;
+import rx.Subject;
+import rx.observables.IObservable;
+import ecs.macros.ComponentMacros;
+import bits.Bits;
 
 using rx.Observable;
 

@@ -1,10 +1,10 @@
 package ecs.core;
 
-import bits.Bits;
-import rx.observables.IObservable;
+import haxe.ds.Vector;
 import rx.Unit;
 import rx.Subject;
-import haxe.ds.Vector;
+import rx.observables.IObservable;
+import bits.Bits;
 
 class ResourceManager
 {

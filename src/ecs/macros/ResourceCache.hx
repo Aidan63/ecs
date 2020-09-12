@@ -18,6 +18,11 @@ function getResourceCount()
     return resourceIncrementer;
 }
 
+function getResourceMap()
+{
+    return resources;
+}
+
 /**
  * Given a complex type it will return an integer representing that type.
  * If this type has not yet been seen the returned integer is stored for future lookups.

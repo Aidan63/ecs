@@ -1,5 +1,6 @@
 import ecs.System;
 import ecs.Universe;
+import ecs.macros.Reports;
 import types.SomeType1;
 import types.SomeType3;
 
@@ -10,6 +11,8 @@ class Test
 {
 	static function main()
 	{
+		printFullReport();
+
 		final universe = new Universe();
 		final comp     = new SomeType3();
 		final entity   = universe.entities.create();

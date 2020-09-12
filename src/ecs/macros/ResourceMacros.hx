@@ -24,19 +24,17 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
 
                 if (found != null)
                 {
-                    final ct   = found.type.toComplexType();
-                    final cidx = getResourceID(ct);
+                    final ct = found.type.toComplexType();
 
-                    if (cidx != null)
+                    switch getResourceID(ct)
                     {
-                        exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
+                        case Some(id):
+                            exprs.push(macro $e{ _manager }.insert($v{ id }, $e{ resource }));
+                        case None:
+                            Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                    }
 
-                        continue;
-                    }
-                    else
-                    {
-                        Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
-                    }
+                    continue;
                 }
 
                 // Check if this identifier is a local var.
@@ -44,31 +42,37 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
 
                 if (found != null)
                 {
-                    final ct   = found.t.toComplexType();
-                    final cidx = getResourceID(ct);
+                    final ct = found.t.toComplexType();
 
-                    if (cidx != null)
+                    switch getResourceID(ct)
                     {
-                        exprs.push(macro $e{ _manager }.insert($v{ cidx }, $e{ resource }));
+                        case Some(id):
+                            exprs.push(macro $e{ _manager }.insert($v{ id }, $e{ resource }));
+                        case None:
+                            Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                    }
 
-                        continue;
-                    }
-                    else
-                    {
-                        Context.error('Component ${ ct.toString() } is not used in any families', Context.currentPos());
-                    }
+                    continue;
                 }
 
                 // If the above checks fail then treat the ident as a type
-                final type = Context.getType(s).toComplexType();
-                final cidx = getResourceID(type);
+                final ct = Context.getType(s).toComplexType();
 
-                switch type
+                switch ct
                 {
-                    case TPath(tp): exprs.push(macro $e{ _manager }.insert($v{ cidx }, new $tp()));
-                    case _:
+                    case TPath(tp):
+                        switch getResourceID(ct)
+                        {
+                            case Some(id):
+                                exprs.push(macro $e{ _manager }.insert($v{ id }, new $tp()));
+                            case None:
+                                Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                        }
+                    case other:
+                        Context.warning('Unsupported resource complex type $other', resource.pos);
                 }
             case _:
+                Context.error('Unsupported expression ${ resource.toString() }', resource.pos);
         }
     }
 
@@ -86,11 +90,17 @@ macro function removeResources(_manager : ExprOf<ecs.core.ResourceManager>, _res
         switch resource.expr
         {
             case EConst(CIdent(s)):
-                final type = Context.getType(s).toComplexType();
-                final ridx = getResourceID(type);
+                final ct = Context.getType(s).toComplexType();
 
-                exprs.push(macro $e{ _manager }.remove($v{ ridx }));
+                switch getResourceID(ct)
+                {
+                    case Some(id):
+                        exprs.push(macro $e{ _manager }.remove($v{ id }));
+                    case None:
+                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                }
             case _:
+                Context.error('Unsupported expression ${ resource.toString() }', resource.pos);
         }
     }
 
@@ -104,12 +114,18 @@ macro function getByType(_manager : ExprOf<ecs.core.ResourceManager>, _resource 
     switch _resource.expr
     {
         case EConst(CIdent(s)):
-            final type = Context.getType(s).toComplexType();
-            final cidx = getResourceID(type);
+            final ct = Context.getType(s).toComplexType();
 
-            return macro ($e{ _manager }.get($v{ cidx }) : $type);
+            switch getResourceID(ct)
+            {
+                case Some(id):
+                    return macro ($e{ _manager }.get($v{ id }) : $ct);
+                case None:
+                    Context.error('Resource ${ ct.toString() } is not used in any families', _resource.pos);
+            }
         case _:
+            Context.error('Unsupported expression ${ _resource.pos }', _resource.pos);
     }
 
-    throw 'Expect an EConst(CIdent) expression';
+    return macro null;
 }

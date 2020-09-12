@@ -1,5 +1,6 @@
 package ecs.macros;
 
+import haxe.ds.Option;
 import haxe.macro.Expr.ComplexType;
 
 using Safety;
@@ -22,16 +23,18 @@ function getResourceCount()
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getResourceID(_ct : ComplexType)
+function getResourceID(_ct : ComplexType) : Option<Int>
 {
     final name = _ct.toString();
 
-    if (resources.exists(name))
+    return if (resources.exists(name))
     {
-        return resources.get(name);
+        Some(resources.get(name));
     }
-
-    throw '$name has not been registered as a resource';
+    else
+    {
+        None;
+    }
 }
 
 function registerResource(_ct : ComplexType)

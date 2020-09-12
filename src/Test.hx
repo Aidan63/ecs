@@ -15,7 +15,7 @@ class Test
 		final entity   = universe.entities.create();
 
 		universe.systems.add(new SomeSystem1(universe.families, universe.entities, universe.components, universe.resources));
-		universe.components.setComponents(entity, SomeType2, comp, "spr_id", getComp());
+		universe.components.setComponents(entity, SomeType2, comp, "spr_id");
 		universe.resources.setResources(SomeType4, SomeType5);
 
 		universe.systems.update(1 / 60);

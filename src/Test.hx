@@ -11,7 +11,7 @@ class Test
 {
 	static function main()
 	{
-		printFullReport();
+		printFullReport(trace);
 
 		final universe = new Universe();
 		final comp     = new SomeType3();

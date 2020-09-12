@@ -7,6 +7,16 @@ import ecs.macros.ResourceCache;
 using Safety;
 using haxe.macro.Tools;
 
+macro function createResourceVector()
+{
+    return macro new haxe.ds.Vector($v{ getResourceCount() });
+}
+
+macro function createResourceBits()
+{
+    return macro new bits.Bits($v{ getResourceCount() });
+}
+
 macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resources : Array<Expr>)
 {
     final exprs = [];

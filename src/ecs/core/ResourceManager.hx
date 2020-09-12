@@ -5,51 +5,86 @@ import rx.Unit;
 import rx.Subject;
 import rx.observables.IObservable;
 import bits.Bits;
+import ecs.macros.ResourceMacros;
 
 class ResourceManager
 {
+    /**
+     * Bits which indicate which resources are currently stored in the system.
+     */
     public final flags : Bits;
 
+    /**
+     * Vector for storing all active resources.
+     */
     final resources : Vector<Any>;
 
+    /**
+     * Subject which emits a new unit value when a resource is added.
+     */
     final onResourcesAdded : Subject<Unit>;
 
+    /**
+     * Subject which emits a new unit value when a resource is removed.
+     */
     final onResourcesRemoved : Subject<Unit>;
 
     public function new()
     {
-        resources          = new Vector(10);
+        flags              = createResourceBits();
+        resources          = createResourceVector();
         onResourcesAdded   = new Subject();
         onResourcesRemoved = new Subject();
-        flags              = new Bits(10);
     }
 
+    /**
+     * Observable that ticks a value every time a resource is added to the world.
+     * @return IObservable<Unit>
+     */
     public function resourcesAdded() : IObservable<Unit>
     {
         return onResourcesAdded;
     }
 
+    /**
+     * Observable that ticks a value every time a resource is removed from the world.
+     * @return IObservable<Unit>
+     */
     public function resourcesRemoved() : IObservable<Unit>
     {
         return onResourcesRemoved;
     }
 
-    public function get(_idx : Int)
+    /**
+     * Gets the resource with the provided ID.
+     * If the resource is not in the system null is returned.
+     * @param _id Resource ID.
+     */
+    public function get(_id : Int)
     {
-        return resources[_idx];
+        return resources[_id];
     }
 
-    public function insert(_idx : Int, _resource : Any)
+    /**
+     * Add a resource into the world.
+     * @param _id Resource ID.
+     * @param _resource Resource object.
+     */
+    public function insert(_id : Int, _resource : Any)
     {
-        resources[_idx] = _resource;
+        resources[_id] = _resource;
 
-        flags.set(_idx);
+        flags.set(_id);
     }
 
-    public function remove(_idx : Int)
+    /**
+     * Remove a resource from the world.
+     * @param _id Resource ID.
+     */
+    public function remove(_id : Int)
     {
-        resources[_idx] = null;
+        resources[_id] = null;
 
-        flags.unset(_idx);
+        flags.unset(_id);
     }
 }

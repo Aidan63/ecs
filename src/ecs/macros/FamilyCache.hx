@@ -69,30 +69,42 @@ function getFamilyByKey(_key : String) : Option<FamilyDefinition>
  */
 function registerFamily(_key : String, _family : FamilyDefinition)
 {
-    final buffer = new StringBuf();
-
-    for (comp in _family.components)
-    {
-        buffer.add(comp.type);
-    }
-
-    final concat = buffer.toString();
+    final familyHash = hash(_family);
 
     // Always store our new family regardless of if a matching family hash is found.
     // This is because if we search by family key we care about the component variables names, not just their types.
     keyedFamilies.set(_key, _family);
 
-    return if (familyIDs.exists(concat))
+    return if (familyIDs.exists(familyHash))
     {
-        familyIDs.get(concat);
+        familyIDs.get(familyHash);
     }
     else
     {
         final id = familyIncrementer++;
 
-        familyIDs.set(concat, id);
+        familyIDs.set(familyHash, id);
         familyDefinitions.push(_family);
 
         id;
     }
+}
+
+function hash(_family : FamilyDefinition) : String
+{
+    final buffer = new StringBuf();
+
+    buffer.add('c:');
+    for (comp in _family.components)
+    {
+        buffer.add(comp.type);
+    }
+
+    buffer.add('r:');
+    for (res in _family.resources)
+    {
+        buffer.add(res.type);
+    }
+
+    return buffer.toString();
 }

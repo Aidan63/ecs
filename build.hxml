@@ -10,6 +10,6 @@
 --macro Safety.safeNavigation('', true)
 
 --debug
---interp
+#--interp
 #--js bin/out.js
-#--cpp bin/cpp
+--cpp bin/cpp

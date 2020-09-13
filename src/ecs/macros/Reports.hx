@@ -37,7 +37,7 @@ macro function printFullReport(_printer : Expr)
         exprs.push(macro $e{ _printer }('    resources'));
         for (res in definition.resources)
         {
-            exprs.push(macro $e{ _printer }('      ' + $v{ res.uID } + ' : ' + $v{ res.name }));
+            exprs.push(macro $e{ _printer }('      ' + $v{ res.uID } + ' : ' + $v{ res.type }));
         }
     }
 

@@ -20,7 +20,7 @@ typedef FamilyField = {
 }
 
 typedef FamilyType = {
-    final name : String;
+    final type : String;
     var ?uID : Int;
 }
 
@@ -107,7 +107,7 @@ macro function familyConstruction() : Array<Field>
     {
         for (resource in family.resources)
         {
-            resource.uID = registerResource(Context.getType(resource.name).toComplexType());
+            resource.uID = registerResource(Context.getType(resource.type).toComplexType());
         }
 
         for (component in family.components)
@@ -365,21 +365,7 @@ function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnly
         }
     }
 
-    extracted.sort((f1, f2) -> {
-        final name1 = f1.name;
-        final name2 = f2.name;
-
-        if (name1 < name2)
-        {
-            return -1;
-        }
-        if (name1 > name2)
-        {
-            return 1;
-        }
-
-        return 0;
-    });
+    extracted.sort(sort);
 
     return Ok(extracted);
 }
@@ -398,10 +384,12 @@ function extractFamilyResources(_exprs : Array<Expr>) : Result<ReadOnlyArray<Fam
     {
         switch e.expr
         {
-            case EConst(CIdent(s)): types.push({ name : s });
+            case EConst(CIdent(s)): types.push({ type : s });
             case other: Error({ message : 'Unexpected expression type $other', pos : e.pos });
         }
     }
+
+    types.sort(sort);
 
     return Ok(types);
 }
@@ -453,6 +441,28 @@ function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
             }
         case _: None;
     }
+}
+
+/**
+ * Function to sort two objects based on a name field.
+ * @param o1 Object 1.
+ * @param o2 Object 2.
+ */
+function sort(o1 : Dynamic, o2 : Dynamic)
+{
+    final name1 = o1.type;
+    final name2 = o2.type;
+
+    if (name1 < name2)
+    {
+        return -1;
+    }
+    if (name1 > name2)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 function makeTableName(_type : String) return 'table$_type';

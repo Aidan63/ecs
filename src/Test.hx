@@ -3,6 +3,7 @@ import ecs.Universe;
 import ecs.macros.Reports;
 import types.SomeType1;
 import types.SomeType3;
+import ecs.macros.SystemMacros.iterate;
 
 using ecs.macros.ResourceMacros;
 using ecs.macros.ComponentMacros;
@@ -11,7 +12,7 @@ class Test
 {
 	static function main()
 	{
-		printFullReport(trace);
+		// printFullReport(trace);
 
 		final universe = new Universe();
 		final comp     = new SomeType3();
@@ -40,23 +41,35 @@ class Test
 
 class SomeSystem1 extends System
 {
-	@:fastFamily var movable = { posTable : SomeType1, velTable : SomeType2 };
+	@:fastFamily var movable = { pos : SomeType1, vel : SomeType2 };
 
-	// @:fastFamily var drawable = { posTable : SomeType1, sprTable : String };
+	@:fastFamily var drawable = { pos : SomeType1, spr : String };
 
 	@:fullFamily var other = {
-		requires : { typTable : SomeType3 },
+		requires : { typ : SomeType3 },
 		resources : [ SomeType4, SomeType5 ]
 	};
 
 	override public function update(_dt : Float)
 	{
-		for (e in other)
-		{
+		iterate(movable, {
+			trace('movable');
+			trace(pos);
+			trace(vel);
+		});
+
+		iterate(drawable, () -> {
+			trace('drawable');
+			trace(pos);
+			trace(spr);
+		});
+
+		iterate(other, e -> {
 			trace(e);
-			trace(typTable.get(e));
+			trace(typ);
 			trace(resources.getByType(SomeType4));
-		}
+			trace(resources.getByType(SomeType5));
+		});
 	}
 }
 

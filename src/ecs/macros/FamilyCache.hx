@@ -1,5 +1,6 @@
 package ecs.macros;
 
+import haxe.ds.Option;
 import haxe.ds.ReadOnlyArray;
 import ecs.macros.SystemMacros.FamilyDefinition;
 
@@ -9,30 +10,64 @@ import ecs.macros.SystemMacros.FamilyDefinition;
 private final familyIDs = new Map<String, Int>();
 
 /**
- * Array of all fields in a family. Index by the family ID.
+ * Array of all family definitions. Index of each family is its unique ID.
  */
-private final familyFields = new Array<FamilyDefinition>();
+private final familyDefinitions = new Array<FamilyDefinition>();
+
+/**
+ * All family definitions keyed by the name of the system and its used typed variable name.
+ * The definition objects are fetched from the `familyDefinition` array.
+ */
+private final keyedFamilies = new Map<String, FamilyDefinition>();
 
 /**
  * Current family counter. Incremented each time a new family is encountered.
  */
 private var familyIncrementer = 0;
 
+/**
+ * Returns the number of families registered.
+ * Only safe to use in expression macros.
+ */
 function getFamilyCount()
 {
     return familyIncrementer;
 }
 
+/**
+ * Returns all registered family definitions. Index of each family in the array is its unique ID.
+ * Only safe to use in expression macros.
+ * @return ReadOnlyArray<FamilyDefinition>
+ */
 function getFamilies() : ReadOnlyArray<FamilyDefinition>
 {
-    return familyFields;
+    return familyDefinitions;
 }
 
 /**
- * Given an array of family fields returns the associated integer ID.
- * @param _fields Array of types in the family.
+ * Find a family by its `class-variable` unique key.
+ * Only safe to use in expression macros.
+ * @param _key Unique key.
+ * @return Option<FamilyDefinition>
  */
-function registerFamily(_family : FamilyDefinition)
+function getFamilyByKey(_key : String) : Option<FamilyDefinition>
+{
+    return if (keyedFamilies.exists(_key))
+    {
+        Some(keyedFamilies.get(_key));
+    }
+    else
+    {
+        None;
+    }
+}
+
+/**
+ * Stores the provided family if one with the same hash does not exist.
+ * @param _key Unique `class-var` string key.
+ * @param _family Family definition object.
+ */
+function registerFamily(_key : String, _family : FamilyDefinition)
 {
     final buffer = new StringBuf();
 
@@ -43,6 +78,10 @@ function registerFamily(_family : FamilyDefinition)
 
     final concat = buffer.toString();
 
+    // Always store our new family regardless of if a matching family hash is found.
+    // This is because if we search by family key we care about the component variables names, not just their types.
+    keyedFamilies.set(_key, _family);
+
     return if (familyIDs.exists(concat))
     {
         familyIDs.get(concat);
@@ -52,7 +91,7 @@ function registerFamily(_family : FamilyDefinition)
         final id = familyIncrementer++;
 
         familyIDs.set(concat, id);
-        familyFields.push(_family);
+        familyDefinitions.push(_family);
 
         id;
     }

@@ -1,5 +1,6 @@
 package ecs.macros;
 
+import haxe.ds.Option;
 import haxe.ds.ReadOnlyArray;
 import haxe.macro.Expr;
 import haxe.macro.Context;
@@ -93,11 +94,15 @@ macro function familyConstruction() : Array<Field>
             kind : FVar(macro : ecs.Family)
         });
 
-        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ registerFamily(family) }));
+        // Insert out `family.get` calls at the very top of the `onAdded` function.
+        // This we we can always access them in a overridden `onAdded`.
+
+        final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ family.name }';
+
+        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ registerFamily(clsKey, family) }));
     }
 
-    // For every field which was found in the family anon object create a Components<T> variable with that field name.
-    // These allow you to fetch the component object for a given entity.
+    // Register all resources and components requested by each family.
     for (family in families)
     {
         for (resource in family.resources)
@@ -105,32 +110,92 @@ macro function familyConstruction() : Array<Field>
             resource.uID = registerResource(Context.getType(resource.name).toComplexType());
         }
 
-        for (idx => field in family.components)
+        for (component in family.components)
         {
-            final ct = Context.getType(field.type).toComplexType();
-
-            field.uID = registerComponent(ct);
-
-            // Don't add multiple table fetches for components across multiple families in the same system.
-            // Should probably have some better checking system.
-            if (!output.exists(f -> f.name == field.name))
-            {
-                output.push({
-                    name : field.name,
-                    pos  : Context.currentPos(),
-                    kind : FVar(macro : ecs.Components<$ct>),
-                });
-
-                insertExprIntoFunction(
-                    families.length + idx,
-                    added,
-                    macro $i{ field.name } = cast components.getTable($v{ field.uID })
-                );
-            }
+            component.uID = registerComponent(Context.getType(component.type).toComplexType());
         }
     }
 
+    // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
+    for (idx => component in getUniqueComponents(families))
+    {
+        final ct   = Context.getType(component.type).toComplexType();
+        final name = makeTableName(component.type);
+
+        output.push({
+            name : name,
+            pos  : Context.currentPos(),
+            kind : FVar(macro : ecs.Components<$ct>),
+        });
+
+        // Inserting at `families.length + idx` ensures all out `getTable` calls happen after the families are fetched.
+        insertExprIntoFunction(
+            families.length + idx,
+            added,
+            macro $i{ name } = cast components.getTable($v{ component.uID })
+        );
+    }
+
     return output;
+}
+
+/**
+ * Iterate over a family and access the components required by it.
+ * @param _family Family to iterate over.
+ * @param _function Code to run for each entity in the family.
+ */
+macro function iterate(_family : ExprOf<Family>, _function : Expr)
+{
+    // Get the name of the family to iterate over.
+    final familyIdent = switch _family.expr
+    {
+        case EConst(CIdent(s)):
+            s;
+        case other:
+            Context.error('Family passed into iterate must be an identifier', _family.pos);
+    }
+    // Extract the name of the entity variable in each iteration and the user typed expressions for the loop.
+    final extracted = switch _function.expr
+    {
+        case EFunction(_, f):
+            {
+                name : if (f.args.length == 0) '_tmpEnt' else f.args[0].name,
+                expr : switch extractFunctionBlock(f.expr)
+                {
+                    case Some(v): v;
+                    case None: Context.error('Unable to extract EBlock from function', f.expr.pos);
+                }
+            };
+        case EBlock(exprs):
+            { name : '_tmpEnt', expr : exprs };
+        case other:
+            Context.error('Unsupported iterate expression $other', _function.pos);
+    }
+
+    // Based on the family name and this systems name search all registered families for a match
+    final clsKey     = '${ Context.getLocalType().toComplexType().toString() }-${ familyIdent }';
+    final components = switch getFamilyByKey(clsKey)
+    {
+        case Some(family): family.components;
+        case None: Context.error('Unable to find a family with the key $clsKey', _family.pos);
+    }
+
+    // Generate a local variable with the requested name for each component in the family.
+    // Then append the user typed for loop expression to ensure the variables are always accessible
+    final forExpr = [];
+    for (c in components)
+    {
+        final varName   = c.name;
+        final tableName = makeTableName(c.type);
+
+        forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+    }
+    for (e in extracted.expr)
+    {
+        forExpr.push(e);
+    }
+
+    return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
 }
 
 /**
@@ -340,3 +405,54 @@ function extractFamilyResources(_exprs : Array<Expr>) : Result<ReadOnlyArray<Fam
 
     return Ok(types);
 }
+
+/**
+ * Given a number of families returns all unique components requested by all of them.
+ * This function checks by type not component variable name.
+ * @param _families Families to search.
+ * @return ReadOnlyArray<FamilyField>
+ */
+function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<FamilyField>
+{
+    final components = new Array<FamilyField>();
+
+    for (family in _families)
+    {
+        for (component in family.components)
+        {
+            if (!components.exists(f -> f.type == component.type))
+            {
+                components.push(component);
+            }
+        }
+    }
+
+    return components;
+}
+
+/**
+ * Given an expression it will try and extract the EBlock expressions acting as if it is a function expression.
+ * It expects an `EMeta(EReturn(EBlock))` expression three.
+ * @param _expr Expression to operate on.
+ * @return Option<Array<Expr>>
+ */
+function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
+{
+    return switch _expr.expr
+    {
+        case EMeta(_, e):
+            switch e.expr
+            {
+                case EReturn(e):
+                    switch e.expr
+                    {
+                        case EBlock(exprs): Some(exprs);
+                        case _: None;
+                    }
+                case _: None;
+            }
+        case _: None;
+    }
+}
+
+function makeTableName(_type : String) return 'table$_type';

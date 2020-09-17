@@ -129,7 +129,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
                         }
                 }
             // Pass construction calls through
-            case ENew(t, params):
+            case ENew(t, _):
                 final type = Context.getType(t.name).toComplexType();
 
                 switch getComponentID(type)

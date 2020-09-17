@@ -63,9 +63,9 @@ class FamilyManager
     {
         for (family in families)
         {
-            if (!family.hasResources && resources.flags.areSet(family.resourcesMask))
+            if (!family.isActive() && resources.flags.areSet(family.resourcesMask))
             {
-                family.hasResources = true;
+                family.activate();
             }
         }
     }
@@ -74,9 +74,9 @@ class FamilyManager
     {
         for (family in families)
         {
-            if (family.hasResources && !resources.flags.areSet(family.resourcesMask))
+            if (family.isActive() && !resources.flags.areSet(family.resourcesMask))
             {
-                family.hasResources = false;
+                family.deactivate();
             }
         }
     }

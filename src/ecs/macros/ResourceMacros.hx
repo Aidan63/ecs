@@ -81,6 +81,16 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                     case other:
                         Context.warning('Unsupported resource complex type $other', resource.pos);
                 }
+            case ENew(t, _):
+                final type = Context.getType(t.name).toComplexType();
+
+                switch getResourceID(type)
+                {
+                    case Some(id):
+                        exprs.push(macro $e{ _manager }.insert($v{ id }, $e{ resource }));
+                    case None:
+                        Context.warning('Resource ${ type.toString() } is not used in any families', resource.pos);
+                }
             case _:
                 Context.error('Unsupported expression ${ resource.toString() }', resource.pos);
         }
@@ -113,8 +123,6 @@ macro function removeResources(_manager : ExprOf<ecs.core.ResourceManager>, _res
                 Context.error('Unsupported expression ${ resource.toString() }', resource.pos);
         }
     }
-
-    exprs.push(macro @:privateAccess $e{ _manager }.onResourcesRemoved.onNext(rx.Unit.unit));
 
     return macro $b{ exprs };
 }

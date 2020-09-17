@@ -39,7 +39,7 @@ class ResourceManager
 
     /**
      * Observable that ticks a value every time a resource is added to the world.
-     * @return IObservable<Unit>
+     * @return IObservable<Int>
      */
     public function resourcesAdded() : IObservable<Unit>
     {
@@ -48,7 +48,7 @@ class ResourceManager
 
     /**
      * Observable that ticks a value every time a resource is removed from the world.
-     * @return IObservable<Unit>
+     * @return IObservable<Int>
      */
     public function resourcesRemoved() : IObservable<Unit>
     {
@@ -83,8 +83,10 @@ class ResourceManager
      */
     public function remove(_id : Int)
     {
-        resources[_id] = null;
-
         flags.unset(_id);
+
+        onResourcesRemoved.onNext(Unit.unit);
+
+        resources[_id] = null;
     }
 }

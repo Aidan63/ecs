@@ -47,97 +47,86 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
     {
         switch comp.expr
         {
-            // Will create a new instance of the constant type
-            case EConst(c):
-                switch c
+            // EConst(CIdent(_)) will either be a field or type name.
+            // In the case of a field we get its type and pass on the expression.
+            // If its a type we create a new instance of it using an empty constructor.
+            case EConst(CIdent(s)):
+                final type = Context.getLocalType().getClass();
+                final vars = Context.getLocalTVars();
+
+                // Check if this identifier is a field type.
+                final found = type.findField(s).or(type.findField(s, true));
+
+                if (found != null)
                 {
-                    case CIdent(s):
-                        final type = Context.getLocalType().getClass();
-                        final vars = Context.getLocalTVars();
+                    final ct = found.type.toComplexType();
 
-                        // Check if this identifier is a field type.
-                        final found = type.findField(s).or(type.findField(s, true));
+                    switch getComponentID(ct)
+                    {
+                        case Some(id):
+                            exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                        case None:
+                            Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
+                    }
 
-                        if (found != null)
-                        {
-                            final ct = found.type.toComplexType();
+                    continue;
+                }
 
-                            switch getComponentID(ct)
-                            {
-                                case Some(id):
-                                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
-                                case None:
-                                    Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
-                            }
+                // Check if this identifier is a local var.
+                final found = vars.get(s);
 
-                            continue;
-                        }
+                if (found != null)
+                {
+                    final ct = found.t.toComplexType();
 
-                        // Check if this identifier is a local var.
-                        final found = vars.get(s);
+                    switch getComponentID(ct)
+                    {
+                        case Some(id):
+                            exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                        case None:
+                            Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
+                    }
 
-                        if (found != null)
-                        {
-                            final ct = found.t.toComplexType();
+                    continue;
+                }
 
-                            switch getComponentID(ct)
-                            {
-                                case Some(id):
-                                    exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
-                                case None:
-                                    Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
-                            }
+                // If the above checks fail then treat the ident as a type
 
-                            continue;
-                        }
+                final ct = Context.getType(s).toComplexType();
 
-                        // If the above checks fail then treat the ident as a type
-
-                        final type = Context.getType(s).toComplexType();
-
-                        switch type
-                        {
-                            case TPath(p):
-                                switch getComponentID(type)
-                                {
-                                    case Some(id):
-                                        exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, new $p()));
-                                    case None:
-                                        Context.warning('Component ${ type.toString() } is not used in any families', comp.pos);
-                                }
-                            case other:
-                        }
-                        
-                    case basic:
-                        final type = switch basic
-                        {
-                            case CInt(_)       : Context.getType('Int');
-                            case CFloat(_)     : Context.getType('Float');
-                            case CString(_, _) : Context.getType('String');
-                            case CRegexp(_, _) : Context.getType('EReg');
-                            case other : throw 'Unsupported CIdent $other';
-                        }
-
-                        final ct = type.toComplexType();
-
+                switch ct
+                {
+                    case TPath(p):
                         switch getComponentID(ct)
                         {
                             case Some(id):
-                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                                exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, new $p()));
                             case None:
                                 Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                         }
+                    case other:
                 }
-            // Pass construction calls through
-            case ENew(t, _):
-                final type = Context.getType(t.name).toComplexType();
+            // For other constants just get its type and pass on the expression.
+            case EConst(_):
+                final ct = Context.typeof(comp).toComplexType();
 
-                switch getComponentID(type)
+                switch getComponentID(ct)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
                     case None:
-                        Context.warning('Component ${ type.toString() } is not used in any families', comp.pos);
+                        Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
+                }
+            // Pass construction calls through
+            case ENew(t, _):
+                final ct = Context.getType(t.name).toComplexType();
+
+                switch getComponentID(ct)
+                {
+                    case Some(id):
+                        exprs.push(macro $e{ _manager }.set(ecsEntityTemp, $v{ id }, $e{ comp }));
+                    case None:
+                        Context.warning('Component ${ ct.toString() } is not used in any families', comp.pos);
                 }
             case other: Context.error('Unsupported expression ${ comp.toString() }', comp.pos);
         }

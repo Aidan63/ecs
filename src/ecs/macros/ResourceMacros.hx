@@ -81,15 +81,25 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
                     case other:
                         Context.warning('Unsupported resource complex type $other', resource.pos);
                 }
-            case ENew(t, _):
-                final type = Context.getType(t.name).toComplexType();
+            case EConst(_):
+                final ct = Context.typeof(resource).toComplexType();
 
-                switch getResourceID(type)
+                switch getResourceID(ct)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _manager }.insert($v{ id }, $e{ resource }));
                     case None:
-                        Context.warning('Resource ${ type.toString() } is not used in any families', resource.pos);
+                        Context.warning('Component ${ ct.toString() } is not used in any families', resource.pos);
+                }
+            case ENew(t, _):
+                final ct = Context.getType(t.name).toComplexType();
+
+                switch getResourceID(ct)
+                {
+                    case Some(id):
+                        exprs.push(macro $e{ _manager }.insert($v{ id }, $e{ resource }));
+                    case None:
+                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
                 }
             case _:
                 Context.error('Unsupported expression ${ resource.toString() }', resource.pos);

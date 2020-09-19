@@ -1,11 +1,16 @@
 package ecs;
 
-abstract Entity(Int) to Int
+abstract Entity(Int)
 {
     public static final none = new Entity(-1);
 
-    public inline function new(_id)
+    public function new(_id)
     {
         this = _id;
+    }
+
+    public function id()
+    {
+        return this;
     }
 }

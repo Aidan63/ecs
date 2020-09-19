@@ -15,11 +15,11 @@ import haxe.ds.Vector;
 
     public function set(_entity : Entity, _component : T)
     {
-        components[_entity] = _component;
+        components[_entity.id()] = _component;
     }
 
     public function get(_entity : Entity) : T
     {
-        return components[_entity];
+        return components[_entity.id()];
     }
 }

@@ -35,7 +35,7 @@ class FamilyManager
 
     function onComponentsAdded(_entity : Entity)
     {
-        final compFlags = components.flags[_entity];
+        final compFlags = components.flags[_entity.id()];
 
         for (family in families)
         {
@@ -48,7 +48,7 @@ class FamilyManager
 
     function onComponentsRemoved(_entity : Entity)
     {
-        final compFlags = components.flags[_entity];
+        final compFlags = components.flags[_entity.id()];
 
         for (family in families)
         {          

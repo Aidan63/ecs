@@ -52,7 +52,7 @@ class SparseSet
      */
     public function has(_entity : Entity)
     {
-        if (dense[sparse[_entity]] == _entity)
+        if (dense[sparse[_entity.id()]] == _entity)
         {
             return true;
         }
@@ -67,7 +67,7 @@ class SparseSet
     public function insert(_entity : Entity)
     {
         dense[number] = _entity;
-        sparse[_entity] = number;
+        sparse[_entity.id()] = number;
 
         number++;
     }
@@ -80,8 +80,8 @@ class SparseSet
     public function remove(_entity : Entity)
     {
         final temp = dense[number - 1];
-        dense[sparse[_entity]] = temp;
-        sparse[temp] = sparse[_entity];
+        dense[sparse[_entity.id()]] = temp;
+        sparse[temp.id()] = sparse[_entity.id()];
 
         number--;
     }
@@ -101,7 +101,7 @@ class SparseSet
      */
     public function getSparse(_entity : Entity)
     {
-        return sparse[_entity];
+        return sparse[_entity.id()];
     }
 
     /**

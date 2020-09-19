@@ -70,17 +70,17 @@ class ComponentManager
     {
         (components[_id] : Components<T>).set(_entity, _component);
 
-        flags[_entity].set(_id);
+        flags[_entity.id()].set(_id);
     }
 
     public function remove(_entity : Entity, _id : Int)
     {
-        flags[_entity].unset(_id);
+        flags[_entity.id()].unset(_id);
     }
 
     function removeAllComponents(_entity : Entity)
     {
-        flags[_entity].clear();
+        flags[_entity.id()].clear();
 
         onComponentsRemoved.onNext(_entity);
     }

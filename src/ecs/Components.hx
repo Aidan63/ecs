@@ -8,9 +8,9 @@ import haxe.ds.Vector;
     // final id : Int;
     final components : Vector<T>;
 
-    public function new()
+    public function new(_size)
     {
-        components = new Vector(1024);
+        components = new Vector(_size);
     }
 
     public function set(_entity : Entity, _component : T)

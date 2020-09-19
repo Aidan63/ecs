@@ -14,12 +14,12 @@ class Universe
     public final families : FamilyManager;
     public final systems : SystemManager;
 
-    public function new()
+    public function new(_maxEntities)
     {
-        entities   = new EntityManager(1024);
+        entities   = new EntityManager(_maxEntities);
         components = new ComponentManager(entities);
         resources  = new ResourceManager();
-        families   = new FamilyManager(components, resources);
+        families   = new FamilyManager(components, resources, _maxEntities);
         systems    = new SystemManager(components, resources, families);
     }
 }

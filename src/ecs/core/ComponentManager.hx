@@ -34,10 +34,10 @@ class ComponentManager
         onComponentsAdded   = new Subject();
         onComponentsRemoved = new Subject();
 
-        flags      = new Vector(1024);
+        flags      = new Vector(_entities.capacity());
         components = createComponentVector();
 
-        setupComponents();
+        setupComponents(_entities.capacity());
 
         for (i in 0...flags.length)
         {

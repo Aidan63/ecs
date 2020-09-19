@@ -17,8 +17,9 @@ macro function createComponentVector()
 
 /**
  * Called in the constructor of `ecs.core.ComponentManager` and instantiates a components table for every component used to the `components` vector.
+ * @param _size Expression which contains the maximum number of entities.
  */
-macro function setupComponents()
+macro function setupComponents(_size : Expr)
 {
     final creation = [];
 
@@ -26,7 +27,7 @@ macro function setupComponents()
     {
         final ct = Context.getType(name).toComplexType();
 
-        creation.push(macro components.set($v{ idx }, new ecs.Components<$ct>()));
+        creation.push(macro components.set($v{ idx }, new ecs.Components<$ct>($e{ _size })));
     }
 
     return macro $b{ creation };

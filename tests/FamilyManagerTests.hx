@@ -14,7 +14,7 @@ class FamilyManagerTests extends BuddySuite
     {
         describe('FamilyManager Tests', {
             it('It will not iterate over a families entities if it does not have the requested resources', {
-                final world  = new Universe();
+                final world  = new Universe(8);
                 final system = new TestSystem(world.families, world.entities, world.components, world.resources);
                 final comp   = new TestComponent1();
 
@@ -37,7 +37,7 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('will fire onEntityAdded events for each entity in a family when it gains all its required resources', {
-                final world  = new Universe();
+                final world  = new Universe(8);
                 final system = new TestSystem(world.families, world.entities, world.components, world.resources);
 
                 world.systems.add(system);
@@ -56,7 +56,7 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('will fire onEntityRemoved events for each entity in a family when it loses a required resource', {
-                final world  = new Universe();
+                final world  = new Universe(8);
                 final system = new TestSystem(world.families, world.entities, world.components, world.resources);
 
                 world.systems.add(system);
@@ -71,7 +71,7 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('allows access to resources from onEntityAdded subscribers', {
-                final world  = new Universe();
+                final world  = new Universe(8);
                 final system = new TestResourceAccessSystem(world.families, world.entities, world.components, world.resources);
 
                 world.systems.add(system);
@@ -84,7 +84,7 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('allows access to resources from onEntityAdded subscribers', {
-                final world  = new Universe();
+                final world  = new Universe(8);
                 final system = new TestResourceAccessSystem(world.families, world.entities, world.components, world.resources);
 
                 world.systems.add(system);

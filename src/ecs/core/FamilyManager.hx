@@ -14,13 +14,13 @@ class FamilyManager
 
     final families : Vector<Family>;
 
-    public function new(_components, _resources)
+    public function new(_components, _resources, _size)
     {
         components = _components;
         resources  = _resources;
         families   = createFamilyVector();
 
-        setupFamilies();
+        setupFamilies(_size);
 
         components.componentsAdded().subscribeFunction(onComponentsAdded);
         components.componentsRemoved().subscribeFunction(onComponentsRemoved);

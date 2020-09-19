@@ -20,14 +20,14 @@ class Family
 
     var active : Bool;
 
-    public function new(_id, _cmpMask, _resMask)
+    public function new(_id, _cmpMask, _resMask, _size)
     {
         id              = _id;
         componentsMask  = _cmpMask;
         resourcesMask   = _resMask;
         onEntityAdded   = new Subject();
         onEntityRemoved = new Subject();
-        entities        = new SparseSet(1024);
+        entities        = new SparseSet(_size);
         active          = if (resourcesMask.isEmpty()) true else false;
     }
 

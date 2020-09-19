@@ -18,8 +18,9 @@ macro function createFamilyVector()
 /**
  * Used by `ecs.core.FamiliesManager`, returns a code block which populates the `faimilies` vectors.
  * Adds an `ecs.Family` instance for each family, generating a bit mask for the components and resources requested by it.
+ * @param _size Expression which contains the maximum number of entities.
  */
-macro function setupFamilies()
+macro function setupFamilies(_size : Expr)
 {
     final creation = [];
 
@@ -41,7 +42,7 @@ macro function setupFamilies()
             creation.push(macro resBits.set($v{ field.uID }));
         }
         
-        creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits)));
+        creation.push(macro families.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits, $e{ _size })));
     }
 
     return macro $b{ creation }

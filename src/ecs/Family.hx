@@ -1,6 +1,6 @@
 package ecs;
 
-import rx.Subject;
+import ecs.ds.Signal;
 import ecs.ds.SparseSet;
 import bits.Bits;
 
@@ -12,9 +12,9 @@ class Family
 
     public final resourcesMask : Bits;
 
-    public final onEntityAdded : Subject<Entity>;
+    public final onEntityAdded : Signal<Entity>;
 
-    public final onEntityRemoved : Subject<Entity>;
+    public final onEntityRemoved : Signal<Entity>;
 
     final entities : SparseSet;
 
@@ -25,8 +25,8 @@ class Family
         id              = _id;
         componentsMask  = _cmpMask;
         resourcesMask   = _resMask;
-        onEntityAdded   = new Subject();
-        onEntityRemoved = new Subject();
+        onEntityAdded   = new Signal();
+        onEntityRemoved = new Signal();
         entities        = new SparseSet(_size);
         active          = if (resourcesMask.isEmpty()) true else false;
     }
@@ -39,7 +39,7 @@ class Family
 
             if (isActive())
             {
-                onEntityAdded.onNext(_entity);
+                onEntityAdded.notify(_entity);
             }
         }
     }
@@ -52,7 +52,7 @@ class Family
             
             if (isActive())
             {
-                onEntityRemoved.onNext(_entity);
+                onEntityRemoved.notify(_entity);
             }
         }
     }
@@ -70,7 +70,7 @@ class Family
 
             for (i in 0...entities.size())
             {
-                onEntityAdded.onNext(entities.getDense(i));
+                onEntityAdded.notify(entities.getDense(i));
             }
         }
     }
@@ -81,7 +81,7 @@ class Family
         {
             for (i in 0...entities.size())
             {
-                onEntityRemoved.onNext(entities.getDense(i));
+                onEntityRemoved.notify(entities.getDense(i));
             }
     
             active = false;

@@ -4,8 +4,6 @@ import haxe.ds.Vector;
 import ecs.core.ComponentManager;
 import ecs.macros.FamilyMacros;
 
-using rx.Observable;
-
 class FamilyManager
 {
     final components : ComponentManager;
@@ -22,10 +20,10 @@ class FamilyManager
 
         setupFamilies(_size);
 
-        components.componentsAdded().subscribeFunction(onComponentsAdded);
-        components.componentsRemoved().subscribeFunction(onComponentsRemoved);
-        resources.resourcesAdded().subscribeFunction(onResourcesAdded);
-        resources.resourcesRemoved().subscribeFunction(onResourcesRemoved);
+        components.onComponentsAdded.subscribe(onComponentsAdded);
+        components.onComponentsRemoved.subscribe(onComponentsRemoved);
+        resources.onResourcesAdded.subscribe(onResourcesAdded);
+        resources.onResourcesRemoved.subscribe(onResourcesRemoved);
     }
 
     public function get(_index : Int)

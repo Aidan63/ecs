@@ -1,0 +1,5 @@
+-cp src
+-cp ../src
+-L bits
+-L safety
+--run Main

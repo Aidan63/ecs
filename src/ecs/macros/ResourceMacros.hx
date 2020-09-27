@@ -106,7 +106,7 @@ macro function setResources(_manager : ExprOf<ecs.core.ResourceManager>, _resour
         }
     }
 
-    exprs.push(macro @:privateAccess $e{ _manager }.onResourcesAdded.onNext(rx.Unit.unit));
+    exprs.push(macro @:privateAccess $e{ _manager }.onResourcesAdded.notify(ecs.ds.Unit.unit));
 
     return macro $b{ exprs };
 }

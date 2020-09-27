@@ -135,7 +135,7 @@ macro function setComponents(_manager : ExprOf<ecs.core.ComponentManager>, _enti
 
     // After we've added all out components publish the entity ID through the components added subject.
     // TODO : somehow expose this without privateAccess?
-    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsAdded.onNext(ecsEntityTemp));
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsAdded.notify(ecsEntityTemp));
 
     return macro $b{ exprs };
 }
@@ -165,7 +165,7 @@ macro function removeComponents(_manager : ExprOf<ecs.core.ComponentManager>, _e
         }
     }
 
-    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsRemoved.onNext(ecsEntityTemp));
+    exprs.push(macro @:privateAccess $e{ _manager }.onComponentsRemoved.notify(ecsEntityTemp));
 
     return macro $b{ exprs };
 }

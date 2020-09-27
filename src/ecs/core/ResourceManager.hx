@@ -1,10 +1,9 @@
 package ecs.core;
 
 import haxe.ds.Vector;
-import rx.Unit;
-import rx.Subject;
-import rx.observables.IObservable;
 import bits.Bits;
+import ecs.ds.Unit;
+import ecs.ds.Signal;
 import ecs.macros.ResourceMacros;
 
 class ResourceManager
@@ -20,39 +19,21 @@ class ResourceManager
     final resources : Vector<Any>;
 
     /**
-     * Subject which emits a new unit value when a resource is added.
+     * Signal which emits a new unit value when a resource is added.
      */
-    final onResourcesAdded : Subject<Unit>;
+    public final onResourcesAdded : Signal<Unit>;
 
     /**
-     * Subject which emits a new unit value when a resource is removed.
+     * Signal which emits a new unit value when a resource is removed.
      */
-    final onResourcesRemoved : Subject<Unit>;
+    public final onResourcesRemoved : Signal<Unit>;
 
     public function new()
     {
         flags              = createResourceBits();
         resources          = createResourceVector();
-        onResourcesAdded   = new Subject();
-        onResourcesRemoved = new Subject();
-    }
-
-    /**
-     * Observable that ticks a value every time a resource is added to the world.
-     * @return IObservable<Int>
-     */
-    public function resourcesAdded() : IObservable<Unit>
-    {
-        return onResourcesAdded;
-    }
-
-    /**
-     * Observable that ticks a value every time a resource is removed from the world.
-     * @return IObservable<Int>
-     */
-    public function resourcesRemoved() : IObservable<Unit>
-    {
-        return onResourcesRemoved;
+        onResourcesAdded   = new Signal();
+        onResourcesRemoved = new Signal();
     }
 
     /**
@@ -85,7 +66,7 @@ class ResourceManager
     {
         flags.unset(_id);
 
-        onResourcesRemoved.onNext(Unit.unit);
+        onResourcesRemoved.notify(Unit.unit);
 
         resources[_id] = null;
     }

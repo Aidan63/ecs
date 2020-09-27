@@ -1,13 +1,13 @@
 package ecs.core;
 
-import rx.Subject;
+import ecs.ds.Signal;
 import haxe.ds.Vector;
 
 class EntityManager
 {
-    final onEntityCreated : Subject<Entity>;
+    public final onEntityCreated : Signal<Entity>;
 
-    final onEntityRemoved : Subject<Entity>;
+    public final onEntityRemoved : Signal<Entity>;
 
     final storage : Vector<Entity>;
 
@@ -15,20 +15,10 @@ class EntityManager
 
     public function new(_max)
     {
-        onEntityCreated = new Subject();
-        onEntityRemoved = new Subject();
+        onEntityCreated = new Signal();
+        onEntityRemoved = new Signal();
         storage         = new Vector(_max);
         nextID          = 0;
-    }
-
-    public function entityCreated() : Subject<Entity>
-    {
-        return onEntityCreated;
-    }
-
-    public function entityRemoved() : Subject<Entity>
-    {
-        return onEntityRemoved;
     }
 
     public function create()
@@ -38,14 +28,14 @@ class EntityManager
 
         storage[idx] = e;
 
-        onEntityCreated.onNext(e);
+        onEntityCreated.notify(e);
 
         return e;
     }
 
     public function destroy(_entity : Entity)
     {
-        onEntityRemoved.onNext(_entity);
+        onEntityRemoved.notify(_entity);
     }
 
     public function get(_id : Int)

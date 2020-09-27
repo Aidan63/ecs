@@ -3,7 +3,6 @@ import ecs.Universe;
 import ecs.macros.SystemMacros.iterate;
 import buddy.BuddySuite;
 
-using rx.Observable;
 using ecs.macros.ResourceMacros;
 using ecs.macros.ComponentMacros;
 using buddy.Should;
@@ -112,8 +111,8 @@ class TestSystem extends System
     override function onAdded()
     {
         counter = 0;
-        family.onEntityAdded.subscribeFunction(_ -> counter++);
-        family.onEntityRemoved.subscribeFunction(_ -> counter--);
+        family.onEntityAdded.subscribe(_ -> counter++);
+        family.onEntityRemoved.subscribe(_ -> counter--);
     }
 
     override public function update(_dt : Float)
@@ -135,10 +134,10 @@ class TestResourceAccessSystem extends System
 
     override function onAdded()
     {
-        family.onEntityAdded.subscribeFunction(entity -> {
+        family.onEntityAdded.subscribe(entity -> {
             counter += resources.getByType(TestResource1).const;
         });
-        family.onEntityRemoved.subscribeFunction(entity -> {
+        family.onEntityRemoved.subscribe(entity -> {
             counter -= resources.getByType(TestResource1).const;
         });
     }

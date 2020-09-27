@@ -1,20 +1,13 @@
 package ecs.core;
 
 import haxe.ds.Vector;
-import rx.Subject;
-import rx.observables.IObservable;
+import ecs.ds.Signal;
 import ecs.macros.ComponentMacros;
 import bits.Bits;
-
-using rx.Observable;
 
 class ComponentManager
 {
     final entities : EntityManager;
-
-    final onComponentsAdded : Subject<Entity>;
-
-    final onComponentsRemoved : Subject<Entity>;
 
     /**
      * All components stored in this system.
@@ -28,11 +21,15 @@ class ComponentManager
      */
     public final flags : Vector<Bits>;
 
+    public final onComponentsAdded : Signal<Entity>;
+
+    public final onComponentsRemoved : Signal<Entity>;
+
     public function new(_entities)
     {
         entities            = _entities;
-        onComponentsAdded   = new Subject();
-        onComponentsRemoved = new Subject();
+        onComponentsAdded   = new Signal();
+        onComponentsRemoved = new Signal();
 
         flags      = new Vector(_entities.capacity());
         components = createComponentVector();
@@ -44,17 +41,7 @@ class ComponentManager
             flags[i] = new Bits();
         }
 
-        entities.entityRemoved().subscribeFunction(removeAllComponents);
-    }
-
-    public function componentsAdded() : IObservable<Entity>
-    {
-        return onComponentsAdded;
-    }
-
-    public function componentsRemoved() : IObservable<Entity>
-    {
-        return onComponentsRemoved;
+        entities.onEntityRemoved.subscribe(removeAllComponents);
     }
 
     /**
@@ -82,6 +69,6 @@ class ComponentManager
     {
         flags[_entity.id()].clear();
 
-        onComponentsRemoved.onNext(_entity);
+        onComponentsRemoved.notify(_entity);
     }
 }

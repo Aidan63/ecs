@@ -25,6 +25,13 @@ class SystemManager
         _system.onAdded();
     }
 
+    public function remove(_system : System)
+    {
+        _system.onRemoved();
+
+        active.remove(_system);
+    }
+
     public function update(_dt : Float)
     {
         for (system in active)

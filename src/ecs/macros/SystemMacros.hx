@@ -188,7 +188,11 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
         final varName   = c.name;
         final tableName = makeTableName(c.type);
 
-        forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+        // Defining a component in a family as '_' will skip the variable generation.
+        if (varName != '_')
+        {
+            forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+        }
     }
     for (e in extracted.expr)
     {

@@ -287,7 +287,8 @@ function extractFastFamily(_field : Field)
         case FVar(_, expr):
             switch expr.expr
             {
-                case EObjectDecl(fields): extractFamilyComponents(fields);
+                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
+                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
                 case _: Error({ message : 'Unexpected variable expression ${ expr.toString() }, expected EObjectDecl', pos : expr.pos });
             }
         case other: Error({ message : 'Unexpected field kind $other, expected FVar', pos : _field.pos });
@@ -313,7 +314,8 @@ function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyErro
                         .find(f -> f.field == 'requires')
                         .let(f -> switch f.expr.expr
                             {
-                                case EObjectDecl(fields): extractFamilyComponents(fields);
+                                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
+                                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
                                 case other: Error({ message : 'Unexpected object field expression $other', pos : f.expr.pos });
                             })
                         .or(Ok([]));
@@ -352,7 +354,7 @@ function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyErro
  * @param _fields Object fields to search through.
  * @return Result<ReadOnlyArray<FamilyField>, Exception>
  */
-function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
+function extractFamilyComponentsFromObject(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
 {
     final extracted = new Array<FamilyField>();
 
@@ -366,6 +368,37 @@ function extractFamilyComponents(_fields : Array<ObjectField>) : Result<ReadOnly
                     type : s
                 });
             case _: return Error({ message : 'Unexpected expression ${ field.expr.toString() }, expected EConst(CIdent(_))', pos : field.expr.pos });
+        }
+    }
+
+    extracted.sort(sort);
+
+    return Ok(extracted);
+}
+
+/**
+ * Extracts all the `EConst(CIdent(_))` names from an array of expressions.
+ * Returned family fields are lexographically ordered by their name.
+ * If any other expressions are found an error is returned.
+ * Since this only checks for `CIdent` expressions the name of all returned components will be `_`,
+ * this causes the `iterate` macro to not generate local variables for these components.
+ * @param _values 
+ * @return Result<ReadOnlyArray<FamilyField>, FamilyError>
+ */
+function extractFamilyComponentsFromArray(_values : Array<Expr>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
+{
+    final extracted = new Array<FamilyField>();
+
+    for (value in _values)
+    {
+        switch value.expr
+        {
+            case EConst(CIdent(s)):
+                extracted.push({
+                    name : '_',
+                    type : s
+                });
+            case _: Error({ message : 'Unexpected expression ${ value.toString() }, expected EConst(CIdent(_))', pos : value.pos });
         }
     }
 

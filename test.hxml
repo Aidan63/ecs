@@ -1,7 +1,5 @@
 -L safety
 -L bits
--L RxHaxe
--L haxe-concurrent
 -L buddy
 -D analyzer-optimize
 -p src
@@ -12,5 +10,5 @@
 
 --debug
 --interp
-#--js bin/out.js
-#--cpp bin/cpp
+#--js tests/bin/out.js
+#--cpp tests/bin/cpp

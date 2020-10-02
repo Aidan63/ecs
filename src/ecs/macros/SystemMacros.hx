@@ -99,7 +99,7 @@ macro function familyConstruction() : Array<Field>
 
         final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ family.name }';
 
-        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ registerFamily(clsKey, family) }));
+        insertExprIntoFunction(idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
     }
 
     // Register all resources and components requested by each family.
@@ -132,7 +132,7 @@ macro function familyConstruction() : Array<Field>
         insertExprIntoFunction(
             families.length + idx,
             added,
-            macro $i{ name } = cast components.getTable($v{ component.uID })
+            macro $i{ name } = cast universe.components.getTable($v{ component.uID })
         );
     }
 

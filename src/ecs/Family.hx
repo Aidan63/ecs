@@ -83,7 +83,7 @@ class Family
             {
                 onEntityRemoved.notify(entities.getDense(i));
             }
-    
+
             active = false;
         }
     }

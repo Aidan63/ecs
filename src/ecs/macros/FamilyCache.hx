@@ -90,7 +90,7 @@ function registerFamily(_key : String, _family : FamilyDefinition)
     }
 }
 
-function hash(_family : FamilyDefinition) : String
+private function hash(_family : FamilyDefinition) : String
 {
     final buffer = new StringBuf();
 

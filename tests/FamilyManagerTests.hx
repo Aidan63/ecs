@@ -1,11 +1,10 @@
 import ecs.System;
 import ecs.Universe;
-import ecs.macros.SystemMacros.iterate;
+import ecs.macros.UniverseMacros.iterate;
 import buddy.BuddySuite;
 
-using ecs.macros.ResourceMacros;
-using ecs.macros.UniverseMacros;
 using buddy.Should;
+using ecs.macros.UniverseMacros;
 
 class FamilyManagerTests extends BuddySuite
 {
@@ -135,10 +134,10 @@ class TestResourceAccessSystem extends System
     override function onAdded()
     {
         family.onEntityAdded.subscribe(entity -> {
-            counter += universe.resources.getByType(TestResource1).const;
+            counter += universe.getResourceByType(TestResource1).const;
         });
         family.onEntityRemoved.subscribe(entity -> {
-            counter -= universe.resources.getByType(TestResource1).const;
+            counter -= universe.getResourceByType(TestResource1).const;
         });
     }
 }

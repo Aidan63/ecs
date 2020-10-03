@@ -8,9 +8,17 @@ import haxe.macro.Type.TVar;
 import haxe.macro.Expr;
 import ecs.macros.ResourceCache.getResourceID;
 import ecs.macros.ComponentCache.getComponentID;
+import ecs.macros.FamilyCache.getFamilyByKey;
 
 using Safety;
 using haxe.macro.Tools;
+
+/**
+ * This module contains all the user facing macro functions needed to easily work with a universe.
+ * Functions within this module are designed to be used as static extensions to a universe object,
+ * the exception to this is `iterate` which cannot be used if this module is included with `using`.
+ * A way around this should be found.
+ */
 
 /**
  * Creates a new entity within the provided universe.
@@ -258,7 +266,7 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                     getResourceID)
                 {
                     case NotCached(ct):
-                        Context.warning('Component $ct is not used in any families', resource.pos);
+                        Context.warning('Resource $ct is not used in any families', resource.pos);
                     case UsableExpr(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
                     case NotFound:
@@ -275,22 +283,22 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
             case EConst(c):
                 final ct = Context.typeof(resource).toComplexType();
 
-                switch getComponentID(ct)
+                switch getResourceID(ct)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
                     case None:
-                        Context.warning('Component ${ ct.toString() } is not used in any families', resource.pos);
+                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
                 }
             case ENew(tp, _):
                 final ct = Context.getType(tp.name).toComplexType();
 
-                switch getComponentID(ct)
+                switch getResourceID(ct)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
                     case None:
-                        Context.warning('Component ${ ct.toString() } is not used in any families', resource.pos);
+                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
                 }
             case _:
                 Context.error('Unsupported resource expression ${ resource.toString() }', resource.pos);
@@ -464,6 +472,155 @@ macro function removeSystems(_universe : Expr, _systems : Array<Expr>)
     }
 
     return macro $b{ exprs };
+}
+
+/**
+ * The iterate macro is the main way to execute code with each entities components in a given family,
+ * it automates the process of getting the components using the names provided when defining the family.
+ * In situations where you don't actually care about the entity itself you can use it in the following way.
+ * 
+ * ```
+ * iterate(someFamily, {
+ *     // code here is ran for each entity found in `someFamily`.
+ * });
+ * ```
+ * Alternatively lambda function syntax can be used.
+ * ```
+ * iterate(someFamily, () -> {
+ *     // code here is ran for each entity found in `someFamily`.
+ * });
+ * ```
+ * If you do need to access the entity whos components are currently being accessed then you can use lambda function
+ * syntax with a single parameter which will then be accessible in the block and contain the current entity.
+ * ```
+ * iterate(someFamily, entity -> {
+ *     // `entity` is the entity which has the components currently being accessed.
+ * });
+ * ```
+ * It is perfectly valid to nest iterate calls as long as there are no component identifier collisions in any of the
+ * nested function iterations.
+ * 
+ * This macro function cannot be used when importing the `UniverseMacros` module for static extension use.
+ * @param _family Family to iterate over.
+ * @param _function Code to run for each entity in the family.
+ */
+macro function iterate(_family : ExprOf<Family>, _function : Expr)
+{
+    // Get the name of the family to iterate over.
+    final familyIdent = switch _family.expr
+    {
+        case EConst(CIdent(s)):
+            s;
+        case other:
+            Context.error('Family passed into iterate must be an identifier', _family.pos);
+    }
+    // Extract the name of the entity variable in each iteration and the user typed expressions for the loop.
+    final extracted = switch _function.expr
+    {
+        case EFunction(_, f):
+            {
+                name : if (f.args.length == 0) '_tmpEnt' else f.args[0].name,
+                expr : switch extractFunctionBlock(f.expr)
+                {
+                    case Some(v): v;
+                    case None: Context.error('Unable to extract EBlock from function', f.expr.pos);
+                }
+            };
+        case EBlock(exprs):
+            { name : '_tmpEnt', expr : exprs };
+        case other:
+            Context.error('Unsupported iterate expression $other', _function.pos);
+    }
+
+    // Based on the family name and this systems name search all registered families for a match
+    final clsKey     = '${ Context.getLocalType().toComplexType().toString() }-${ familyIdent }';
+    final components = switch getFamilyByKey(clsKey)
+    {
+        case Some(family): family.components;
+        case None: Context.error('Unable to find a family with the key $clsKey', _family.pos);
+    }
+
+    // Generate a local variable with the requested name for each component in the family.
+    // Then append the user typed for loop expression to ensure the variables are always accessible
+    final forExpr = [];
+    for (c in components)
+    {
+        final varName   = c.name;
+        final tableName = 'table${ c.type }';
+
+        // Defining a component in a family as '_' will skip the variable generation.
+        if (varName != '_')
+        {
+            forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+        }
+    }
+    for (e in extracted.expr)
+    {
+        forExpr.push(e);
+    }
+
+    return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
+}
+
+/**
+ * Given a type it will fetch that resource from the provided universe.
+ * This is only safe to use within an `iterate` call or if you've manually checked the `isActive`
+ * status of a family which requires the resource you are requesting. Calling this macro at other times
+ * may result in a null value.
+ * 
+ * ```
+ * iterate(someFamily, {
+ *     final obj = universe.getResourceByType(MyResource);
+ * })
+ * ```
+ * 
+ * @param _universe 
+ * @param _resource 
+ */
+macro function getResourceByType(_universe : Expr, _resource : Expr)
+{
+    switch _resource.expr
+    {
+        case EConst(CIdent(s)):
+            final ct = Context.getType(s).toComplexType();
+
+            switch getResourceID(ct)
+            {
+                case Some(id):
+                    return macro ($e{ _universe }.resources.get($v{ id }) : $ct);
+                case None:
+                    Context.error('Resource ${ ct.toString() } is not used in any families', _resource.pos);
+            }
+        case _:
+            Context.error('Unsupported expression ${ _resource.pos }', _resource.pos);
+    }
+
+    return macro null;
+}
+
+/**
+ * Given an expression it will try and extract the EBlock expressions acting as if it is a function expression.
+ * It expects an `EMeta(EReturn(EBlock))` expression three.
+ * @param _expr Expression to operate on.
+ * @return Option<Array<Expr>>
+ */
+private function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
+{
+    return switch _expr.expr
+    {
+        case EMeta(_, e):
+            switch e.expr
+            {
+                case EReturn(e):
+                    switch e.expr
+                    {
+                        case EBlock(exprs): Some(exprs);
+                        case _: None;
+                    }
+                case _: None;
+            }
+        case _: None;
+    }
 }
 
 /**

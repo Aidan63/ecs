@@ -61,7 +61,11 @@ macro function createEntity(_universe : Expr) : ExprOf<Entity>
  */
 macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
 {
-    return macro $e{ _universe }.entities.destroy($e{ _entity });
+    return macro {
+        final _tmpEnt = $e{ _entity };
+        $e{ _universe }.components.clear(_tmpEnt);
+        $e{ _universe }.families.componentsRemoved(_tmpEnt);
+    }
 }
 
 /**
@@ -158,7 +162,7 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
 
     // After we've added all out components publish the entity ID through the components added subject.
     // TODO : somehow expose this without privateAccess?
-    exprs.push(macro $e{ _universe }.components.onComponentsAdded.notify(ecsEntityTemp));
+    exprs.push(macro $e{ _universe }.families.componentsAdded(ecsEntityTemp));
 
     return macro $b{ exprs };
 }
@@ -212,7 +216,7 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
         }
     }
 
-    exprs.push(macro $e{ _universe }.components.onComponentsRemoved.notify(ecsEntityTemp));
+    exprs.push(macro $e{ _universe }.families.componentsRemoved(ecsEntityTemp));
 
     return macro $b{ exprs };
 }
@@ -305,7 +309,7 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
         }
     }
 
-    exprs.push(macro @:privateAccess $e{ _universe }.resources.onResourcesAdded.notify(ecs.ds.Unit.unit));
+    exprs.push(macro $e{ _universe }.families.resourcesAdded());
 
     return macro $b{ exprs };
 }
@@ -343,11 +347,15 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
                     case NotCached(ct):
                         Context.warning('Resource $ct is not used in any families', resource.pos);
                     case UsableExpr(id):
+                        exprs.push(macro $e{ _universe }.resources.flags.unset($v{ id }));
+                        exprs.push(macro $e{ _universe }.families.resourcesRemoved());
                         exprs.push(macro $e{ _universe }.resources.remove($v{ id }));
                     case NotFound:
                         switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getResourceID)
                         {
                             case Ok(result):
+                                exprs.push(macro $e{ _universe }.resources.flags.unset($v{ result.id }));
+                                exprs.push(macro $e{ _universe }.families.resourcesRemoved());
                                 exprs.push(macro $e{ _universe }.resources.remove($v{ result.id }));
                             case Error(error):
                                 Context.warning(error, resource.pos);

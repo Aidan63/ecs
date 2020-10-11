@@ -5,20 +5,14 @@ import haxe.ds.Vector;
 
 class EntityManager
 {
-    public final onEntityCreated : Signal<Entity>;
-
-    public final onEntityRemoved : Signal<Entity>;
-
     final storage : Vector<Entity>;
 
     var nextID : Int;
 
     public function new(_max)
     {
-        onEntityCreated = new Signal();
-        onEntityRemoved = new Signal();
-        storage         = new Vector(_max);
-        nextID          = 0;
+        storage = new Vector(_max);
+        nextID  = 0;
     }
 
     public function create()
@@ -28,14 +22,7 @@ class EntityManager
 
         storage[idx] = e;
 
-        onEntityCreated.notify(e);
-
         return e;
-    }
-
-    public function destroy(_entity : Entity)
-    {
-        onEntityRemoved.notify(_entity);
     }
 
     public function get(_id : Int)

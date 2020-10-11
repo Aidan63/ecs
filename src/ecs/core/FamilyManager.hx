@@ -19,11 +19,6 @@ class FamilyManager
         families   = createFamilyVector();
 
         setupFamilies(_size);
-
-        components.onComponentsAdded.subscribe(onComponentsAdded);
-        components.onComponentsRemoved.subscribe(onComponentsRemoved);
-        resources.onResourcesAdded.subscribe(onResourcesAdded);
-        resources.onResourcesRemoved.subscribe(onResourcesRemoved);
     }
 
     public function get(_index : Int)
@@ -31,7 +26,7 @@ class FamilyManager
         return families[_index];
     }
 
-    function onComponentsAdded(_entity : Entity)
+    public function componentsAdded(_entity : Entity)
     {
         final compFlags = components.flags[_entity.id()];
 
@@ -44,7 +39,7 @@ class FamilyManager
 		}
     }
 
-    function onComponentsRemoved(_entity : Entity)
+    public function componentsRemoved(_entity : Entity)
     {
         final compFlags = components.flags[_entity.id()];
 
@@ -57,7 +52,7 @@ class FamilyManager
         }
     }
 
-    function onResourcesAdded(_)
+    public function resourcesAdded()
     {
         for (family in families)
         {
@@ -68,7 +63,7 @@ class FamilyManager
         }
     }
 
-    function onResourcesRemoved(_)
+    public function resourcesRemoved()
     {
         for (family in families)
         {

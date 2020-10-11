@@ -18,22 +18,10 @@ class ResourceManager
      */
     final resources : Vector<Any>;
 
-    /**
-     * Signal which emits a new unit value when a resource is added.
-     */
-    public final onResourcesAdded : Signal<Unit>;
-
-    /**
-     * Signal which emits a new unit value when a resource is removed.
-     */
-    public final onResourcesRemoved : Signal<Unit>;
-
     public function new()
     {
-        flags              = createResourceBits();
-        resources          = createResourceVector();
-        onResourcesAdded   = new Signal();
-        onResourcesRemoved = new Signal();
+        flags     = createResourceBits();
+        resources = createResourceVector();
     }
 
     /**
@@ -64,10 +52,6 @@ class ResourceManager
      */
     public function remove(_id : Int)
     {
-        flags.unset(_id);
-
-        onResourcesRemoved.notify(Unit.unit);
-
         resources[_id] = null;
     }
 }

@@ -608,18 +608,10 @@ private function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
 {
     return switch _expr.expr
     {
-        case EMeta(_, e):
-            switch e.expr
-            {
-                case EReturn(e):
-                    switch e.expr
-                    {
-                        case EBlock(exprs): Some(exprs);
-                        case _: None;
-                    }
-                case _: None;
-            }
-        case _: None;
+        case EMeta(_, { expr : EReturn({ expr : EBlock(exprs) }) }):
+            Some(exprs);
+        case _:
+            None;
     }
 }
 

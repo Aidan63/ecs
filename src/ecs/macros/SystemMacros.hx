@@ -18,11 +18,6 @@ typedef FamilyField = {
     var ?uID : Int;
 }
 
-typedef FamilyType = {
-    final type : String;
-    var ?uID : Int;
-}
-
 typedef FamilyError = {
     final message : String;
     final pos : Position;
@@ -37,7 +32,7 @@ typedef FamilyDefinition = {
     /**
      * All the static resources requested by this family.
      */
-    final resources : ReadOnlyArray<FamilyType>;
+    final resources : ReadOnlyArray<FamilyField>;
 
     /**
      * All of the components requested by this family.
@@ -259,7 +254,8 @@ private function extractFullFamily(_field : Field) : Result<FamilyDefinition, Fa
                         .find(f -> f.field == 'resources')
                         .let(f -> switch f.expr.expr
                             {
-                                case EArrayDecl(values): extractFamilyResources(values);
+                                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
+                                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
                                 case other: Error({ message : 'Unexpected object field expression $other', pos : f.expr.pos });
                             })
                         .or(Ok([]));
@@ -341,30 +337,6 @@ private function extractFamilyComponentsFromArray(_values : Array<Expr>) : Resul
     extracted.sort(sort);
 
     return Ok(extracted);
-}
-
-/**
- * Given an array of expressions it will extract all `EConst(CIdent(_))` names into family types.
- * If an expression not of that type is found it will return with an error.
- * @param _exprs Expressions to read.
- * @return Result<ReadOnlyArray<FamilyType>, FamilyError>
- */
-private function extractFamilyResources(_exprs : Array<Expr>) : Result<ReadOnlyArray<FamilyType>, FamilyError>
-{
-    final types = new Array<FamilyType>();
-
-    for (e in _exprs)
-    {
-        switch e.expr
-        {
-            case EConst(CIdent(s)): types.push({ type : s });
-            case other: Error({ message : 'Unexpected expression type $other', pos : e.pos });
-        }
-    }
-
-    types.sort(sort);
-
-    return Ok(types);
 }
 
 /**

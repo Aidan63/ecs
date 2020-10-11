@@ -475,6 +475,89 @@ macro function removeSystems(_universe : Expr, _systems : Array<Expr>)
 }
 
 /**
+ * The setup macro function checks if all the resources requested by the provided families are available,
+ * if they are it creates local variables for each resource with the specified name and runs the provided code block.
+ * 
+ * ```
+ * setup(someFamily, {
+ *     // code will only be ran if all of the resources requested by `someFamily` are available.
+ * });
+ * ```
+ * 
+ * This macro function cannot be used when importing the `UniverseMacros` module for static extension use.
+ * @param _families Either a family definition variable or an array of family definition variables. 
+ * @param _function Code to execute if all the families are active.
+ */
+macro function setup(_families : Expr, _function : Expr)
+{
+    final familiesToSetup = switch _families.expr
+    {
+        case EConst(CIdent(s)): [ s ];
+        case EArrayDecl(values): [ for (e in values) switch e.expr {
+            case EConst(CIdent(s)): s;
+            case _: Context.error('Family should be an identifier', e.pos);
+        } ];
+        case _: Context.error('Families to setup must be an identifier or an array of identifiers', _families.pos);
+    }
+    final extracted = switch _function.expr
+    {
+        case EFunction(_, f):
+            switch extractFunctionBlock(f.expr)
+            {
+                case Some(v): v;
+                case None: Context.error('Unable to extract EBlock from function', f.expr.pos);
+            }
+        case EBlock(exprs):
+            exprs;
+        case other:
+            Context.error('Unsupported iterate expression $other', _function.pos);
+    }
+    
+    // Insert variable declarations to the top of the extracted function block.
+    // TODO : should probably check to make sure there are no type or name collisions.
+    for (ident in familiesToSetup)
+    {
+        final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ ident }';
+        switch getFamilyByKey(clsKey)
+        {
+            case Some(family):
+                for (resource in family.resources)
+                {
+                    if (resource.name != '_')
+                    {
+                        final ct = Context.getType(resource.type).toComplexType();
+
+                        switch getResourceID(ct)
+                        {
+                            case Some(id):
+                                final varName = resource.name;
+                                final resType = resource.type;
+
+                                extracted.insert(0, macro final $varName = (universe.resources.get($v{ id }) : $ct));
+                            case None:
+                                Context.error('Resource ${ resource.type } has not been requested by any families', _families.pos);
+                        }
+                    }
+                }
+            case None: Context.error('Unable to find a family with the key $clsKey', _families.pos);
+        }
+    }
+
+    // Build up the if check for all the of families
+    var idx  = familiesToSetup.length - 1;
+    var expr = macro $i{ familiesToSetup[idx] }.isActive();
+
+    while (idx > 0)
+    {
+        idx--;
+
+        expr = macro $e{ expr } && $i{ familiesToSetup[idx] }.isActive();
+    }
+
+    return macro if ($e{ expr }) $b{ extracted };
+}
+
+/**
  * The iterate macro is the main way to execute code with each entities components in a given family,
  * it automates the process of getting the components using the names provided when defining the family.
  * In situations where you don't actually care about the entity itself you can use it in the following way.
@@ -560,42 +643,6 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
     }
 
     return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
-}
-
-/**
- * Given a type it will fetch that resource from the provided universe.
- * This is only safe to use within an `iterate` call or if you've manually checked the `isActive`
- * status of a family which requires the resource you are requesting. Calling this macro at other times
- * may result in a null value.
- * 
- * ```
- * iterate(someFamily, {
- *     final obj = universe.getResourceByType(MyResource);
- * })
- * ```
- * 
- * @param _universe 
- * @param _resource 
- */
-macro function getResourceByType(_universe : Expr, _resource : Expr)
-{
-    switch _resource.expr
-    {
-        case EConst(CIdent(s)):
-            final ct = Context.getType(s).toComplexType();
-
-            switch getResourceID(ct)
-            {
-                case Some(id):
-                    return macro ($e{ _universe }.resources.get($v{ id }) : $ct);
-                case None:
-                    Context.error('Resource ${ ct.toString() } is not used in any families', _resource.pos);
-            }
-        case _:
-            Context.error('Unsupported expression ${ _resource.pos }', _resource.pos);
-    }
-
-    return macro null;
 }
 
 /**

@@ -1,5 +1,6 @@
 import ecs.System;
 import ecs.Universe;
+import ecs.macros.UniverseMacros.setup;
 import ecs.macros.UniverseMacros.iterate;
 import buddy.BuddySuite;
 
@@ -128,16 +129,20 @@ class TestResourceAccessSystem extends System
 
     @:fullFamily var family = {
         requires  : { comp : TestComponent1 },
-        resources : [ TestResource1 ]
+        resources : { res : TestResource1 }
     }
 
     override function onAdded()
     {
         family.onEntityAdded.subscribe(entity -> {
-            counter += universe.getResourceByType(TestResource1).const;
+            setup(family, {
+                counter += res.const;
+            });
         });
         family.onEntityRemoved.subscribe(entity -> {
-            counter -= universe.getResourceByType(TestResource1).const;
+            setup(family, {
+                counter -= res.const;
+            });
         });
     }
 }

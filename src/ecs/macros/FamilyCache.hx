@@ -4,6 +4,8 @@ import haxe.ds.Option;
 import haxe.ds.ReadOnlyArray;
 import ecs.macros.SystemMacros.FamilyDefinition;
 
+using Lambda;
+
 /**
  * Map of family IDs keyed by concatenated component types which compose that family.
  */
@@ -42,6 +44,26 @@ function getFamilyCount()
 function getFamilies() : ReadOnlyArray<FamilyDefinition>
 {
     return familyDefinitions;
+}
+
+/**
+ * Returns an array of family IDs which request the resource with the provided ID.
+ * @param _id Resource ID to search for in families.
+ * @return ReadOnlyArray<Int>
+ */
+function getFamilyIDsWithResource(_id : Int) : ReadOnlyArray<Int>
+{
+    final filtered = [];
+
+    for (idx => family in familyDefinitions)
+    {
+        if (family.resources.exists(f -> f.uID == _id))
+        {
+            filtered.push(idx);
+        }
+    }
+
+    return filtered;
 }
 
 /**

@@ -52,6 +52,8 @@ class ResourceManager
      */
     public function remove(_id : Int)
     {
+        flags.unset(_id);
+
         resources[_id] = null;
     }
 }

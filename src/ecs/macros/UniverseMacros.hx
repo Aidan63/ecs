@@ -1,5 +1,6 @@
 package ecs.macros;
 
+import ecs.ds.Set;
 import ecs.ds.Result;
 import haxe.ds.Option;
 import haxe.macro.Context;
@@ -9,6 +10,7 @@ import haxe.macro.Expr;
 import ecs.macros.ResourceCache.getResourceID;
 import ecs.macros.ComponentCache.getComponentID;
 import ecs.macros.FamilyCache.getFamilyByKey;
+import ecs.macros.FamilyCache.getFamilyIDsWithResource;
 
 using Safety;
 using haxe.macro.Tools;
@@ -257,6 +259,7 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
 macro function setResources(_universe : Expr, _resources : Array<Expr>)
 {
     final exprs = [];
+    final added = new Set();
 
     for (resource in _resources)
     {
@@ -273,6 +276,10 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                         Context.warning('Resource $ct is not used in any families', resource.pos);
                     case UsableExpr(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
+                        for (familyID in getFamilyIDsWithResource(id))
+                        {
+                            added.add(familyID);
+                        }
                     case NotFound:
                         switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getResourceID)
                         {
@@ -280,6 +287,10 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                                 final id = result.id;
                                 final tp = result.tp;
                                 exprs.push(macro $e{ _universe }.resources.insert($v{ id }, new $tp()));
+                                for (familyID in getFamilyIDsWithResource(id))
+                                {
+                                    added.add(familyID);
+                                }
                             case Error(error):
                                 Context.warning(error, resource.pos);
                         }
@@ -291,6 +302,10 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
+                        for (familyID in getFamilyIDsWithResource(id))
+                        {
+                            added.add(familyID);
+                        }
                     case None:
                         Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
                 }
@@ -301,6 +316,10 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                 {
                     case Some(id):
                         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
+                        for (familyID in getFamilyIDsWithResource(id))
+                        {
+                            added.add(familyID);
+                        }
                     case None:
                         Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
                 }
@@ -309,7 +328,11 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
         }
     }
 
-    exprs.push(macro $e{ _universe }.families.resourcesAdded());
+    // Add a call to try and activate each families which requested the resources.
+    for (familyID in added)
+    {
+        exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
+    }
 
     return macro $b{ exprs };
 }
@@ -332,6 +355,7 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
 macro function removeResources(_universe : Expr, _resources : Array<Expr>)
 {
     final exprs = [];
+    final adder = new Set();
 
     for (resource in _resources)
     {
@@ -347,16 +371,20 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
                     case NotCached(ct):
                         Context.warning('Resource $ct is not used in any families', resource.pos);
                     case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.resources.flags.unset($v{ id }));
-                        exprs.push(macro $e{ _universe }.families.resourcesRemoved());
-                        exprs.push(macro $e{ _universe }.resources.remove($v{ id }));
+                        adder.add(id);
+                        for (familyID in getFamilyIDsWithResource(id))
+                        {
+                            exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+                        }
                     case NotFound:
                         switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getResourceID)
                         {
                             case Ok(result):
-                                exprs.push(macro $e{ _universe }.resources.flags.unset($v{ result.id }));
-                                exprs.push(macro $e{ _universe }.families.resourcesRemoved());
-                                exprs.push(macro $e{ _universe }.resources.remove($v{ result.id }));
+                                adder.add(result.id);
+                                for (familyID in getFamilyIDsWithResource(result.id))
+                                {
+                                    exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+                                }
                             case Error(error):
                                 Context.warning(error, resource.pos);
                         }
@@ -364,6 +392,12 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
             case _:
                 Context.error('Unsupported resource expression ${ resource.toString() }', resource.pos);
         }
+    }
+
+    // Remove the resources once each family has been deactivated
+    for (resourceID in adder)
+    {
+        exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
     }
 
     return macro $b{ exprs };

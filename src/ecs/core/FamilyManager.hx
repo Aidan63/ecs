@@ -52,25 +52,11 @@ class FamilyManager
         }
     }
 
-    public function resourcesAdded()
+    public function tryActivate(_id : Int)
     {
-        for (family in families)
+        if (!families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
         {
-            if (!family.isActive() && resources.flags.areSet(family.resourcesMask))
-            {
-                family.activate();
-            }
-        }
-    }
-
-    public function resourcesRemoved()
-    {
-        for (family in families)
-        {
-            if (family.isActive() && !resources.flags.areSet(family.resourcesMask))
-            {
-                family.deactivate();
-            }
+            families[_id].activate();
         }
     }
 }

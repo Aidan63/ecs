@@ -11,6 +11,7 @@ import ecs.macros.ResourceCache.getResourceID;
 import ecs.macros.ComponentCache.getComponentID;
 import ecs.macros.FamilyCache.getFamilyByKey;
 import ecs.macros.FamilyCache.getFamilyIDsWithResource;
+import ecs.macros.FamilyCache.getFamilyIDsWithComponent;
 
 using Safety;
 using haxe.macro.Tools;
@@ -64,9 +65,9 @@ macro function createEntity(_universe : Expr) : ExprOf<Entity>
 macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
 {
     return macro {
-        final _tmpEnt = $e{ _entity };
-        $e{ _universe }.components.clear(_tmpEnt);
-        $e{ _universe }.families.componentsRemoved(_tmpEnt);
+        final _ecsTmpEntity = $e{ _entity };
+        $e{ _universe }.components.clear(_ecsTmpEntity);
+        $e{ _universe }.families.whenEntityDestroyed(_ecsTmpEntity);
     }
 }
 
@@ -109,7 +110,8 @@ macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
  */
 macro function setComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs = [ macro final ecsEntityTemp = $e{ _entity } ];
+    final exprs = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added = new Set();
 
     for (component in _components)
     {
@@ -125,14 +127,22 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
                     case NotCached(ct):
                         Context.warning('Component $ct is not used in any families', component.pos);
                     case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.components.set(ecsEntityTemp, $v{ id }, $e{ component }));
+                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
+                        for (familyID in getFamilyIDsWithComponent(id))
+                        {
+                            added.add(familyID);
+                        }
                     case NotFound:
                         switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getComponentID)
                         {
                             case Ok(result):
                                 final id = result.id;
                                 final tp = result.tp;
-                                exprs.push(macro $e{ _universe }.components.set(ecsEntityTemp, $v{ id }, new $tp()));
+                                exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, new $tp()));
+                                for (familyID in getFamilyIDsWithComponent(id))
+                                {
+                                    added.add(familyID);
+                                }
                             case Error(error):
                                 Context.warning(error, component.pos);
                         }
@@ -143,7 +153,11 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
                 switch getComponentID(ct)
                 {
                     case Some(id):
-                        exprs.push(macro $e{ _universe }.components.set(ecsEntityTemp, $v{ id }, $e{ component }));
+                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
+                        for (familyID in getFamilyIDsWithComponent(id))
+                        {
+                            added.add(familyID);
+                        }
                     case None:
                         Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
                 }
@@ -153,7 +167,11 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
                 switch getComponentID(ct)
                 {
                     case Some(id):
-                        exprs.push(macro $e{ _universe }.components.set(ecsEntityTemp, $v{ id }, $e{ component }));
+                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
+                        for (familyID in getFamilyIDsWithComponent(id))
+                        {
+                            added.add(familyID);
+                        }
                     case None:
                         Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
                 }
@@ -162,9 +180,15 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
         }
     }
 
-    // After we've added all out components publish the entity ID through the components added subject.
-    // TODO : somehow expose this without privateAccess?
-    exprs.push(macro $e{ _universe }.families.componentsAdded(ecsEntityTemp));
+    // After all `set` functions are called check each family which could have been modified by the components added.
+    exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
+    for (familyID in added)
+    {
+        exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+        exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+            ecsTmpFamily.add(_ecsTmpEntity);
+        });
+    }
 
     return macro $b{ exprs };
 }
@@ -187,7 +211,8 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
  */
 macro function removeComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs = [ macro final ecsEntityTemp = $e{ _entity } ];
+    final exprs = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added = new Set();
 
     for (component in _components)
     {
@@ -203,12 +228,20 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
                     case NotCached(ct):
                         Context.warning('Component $ct is not used in any families', component.pos);
                     case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.components.remove(ecsEntityTemp, $v{ id }));
+                        exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
+                        for (familyID in getFamilyIDsWithComponent(id))
+                        {
+                            added.add(familyID);
+                        }
                     case NotFound:
                         switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getComponentID)
                         {
                             case Ok(result):
-                                exprs.push(macro $e{ _universe }.components.remove(ecsEntityTemp, $v{ result.id }));
+                                exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ result.id }));
+                                for (familyID in getFamilyIDsWithComponent(result.id))
+                                {
+                                    added.add(familyID);
+                                }
                             case Error(error):
                                 Context.warning(error, component.pos);
                         }
@@ -218,7 +251,15 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
         }
     }
 
-    exprs.push(macro $e{ _universe }.families.componentsRemoved(ecsEntityTemp));
+    // After all `remove` functions are called check each family which could have been modified by the components removed.
+    exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
+    for (familyID in added)
+    {
+        exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+        exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+            ecsTmpFamily.remove(_ecsTmpEntity);
+        });
+    }
 
     return macro $b{ exprs };
 }

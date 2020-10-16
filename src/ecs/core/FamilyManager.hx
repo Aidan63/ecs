@@ -26,20 +26,15 @@ class FamilyManager
         return families[_index];
     }
 
-    public function componentsAdded(_entity : Entity)
+    public function tryActivate(_id : Int)
     {
-        final compFlags = components.flags[_entity.id()];
-
-        for (family in families)
+        if (!families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
         {
-            if (compFlags.areSet(family.componentsMask))
-            {
-                family.add(_entity);
-            }
-		}
+            families[_id].activate();
+        }
     }
 
-    public function componentsRemoved(_entity : Entity)
+    public function whenEntityDestroyed(_entity : Entity)
     {
         final compFlags = components.flags[_entity.id()];
 
@@ -49,14 +44,6 @@ class FamilyManager
             {
                 family.remove(_entity);
             }
-        }
-    }
-
-    public function tryActivate(_id : Int)
-    {
-        if (!families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
-        {
-            families[_id].activate();
         }
     }
 }

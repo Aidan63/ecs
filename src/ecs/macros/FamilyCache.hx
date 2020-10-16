@@ -66,6 +66,21 @@ function getFamilyIDsWithResource(_id : Int) : ReadOnlyArray<Int>
     return filtered;
 }
 
+function getFamilyIDsWithComponent(_id : Int) : ReadOnlyArray<Int>
+{
+    final filtered = [];
+
+    for (idx => family in familyDefinitions)
+    {
+        if (family.components.exists(f -> f.uID == _id))
+        {
+            filtered.push(idx);
+        }
+    }
+
+    return filtered;
+}
+
 /**
  * Find a family by its `class-variable` unique key.
  * Only safe to use in expression macros.

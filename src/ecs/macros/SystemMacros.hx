@@ -1,6 +1,5 @@
 package ecs.macros;
 
-import haxe.ds.Option;
 import haxe.ds.ReadOnlyArray;
 import haxe.macro.Expr;
 import haxe.macro.Context;
@@ -19,11 +18,6 @@ typedef FamilyField = {
     var ?uID : Int;
 }
 
-typedef FamilyType = {
-    final type : String;
-    var ?uID : Int;
-}
-
 typedef FamilyError = {
     final message : String;
     final pos : Position;
@@ -38,7 +32,7 @@ typedef FamilyDefinition = {
     /**
      * All the static resources requested by this family.
      */
-    final resources : ReadOnlyArray<FamilyType>;
+    final resources : ReadOnlyArray<FamilyField>;
 
     /**
      * All of the components requested by this family.
@@ -99,7 +93,7 @@ macro function familyConstruction() : Array<Field>
 
         final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ family.name }';
 
-        insertExprIntoFunction(idx, added, macro $i{ family.name } = families.get($v{ registerFamily(clsKey, family) }));
+        insertExprIntoFunction(idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
     }
 
     // Register all resources and components requested by each family.
@@ -120,7 +114,7 @@ macro function familyConstruction() : Array<Field>
     for (idx => component in getUniqueComponents(families))
     {
         final ct   = Context.getType(component.type).toComplexType();
-        final name = makeTableName(component.type);
+        final name = 'table${ component.type }';
 
         output.push({
             name : name,
@@ -132,74 +126,11 @@ macro function familyConstruction() : Array<Field>
         insertExprIntoFunction(
             families.length + idx,
             added,
-            macro $i{ name } = cast components.getTable($v{ component.uID })
+            macro $i{ name } = cast universe.components.getTable($v{ component.uID })
         );
     }
 
     return output;
-}
-
-/**
- * Iterate over a family and access the components required by it.
- * @param _family Family to iterate over.
- * @param _function Code to run for each entity in the family.
- */
-macro function iterate(_family : ExprOf<Family>, _function : Expr)
-{
-    // Get the name of the family to iterate over.
-    final familyIdent = switch _family.expr
-    {
-        case EConst(CIdent(s)):
-            s;
-        case other:
-            Context.error('Family passed into iterate must be an identifier', _family.pos);
-    }
-    // Extract the name of the entity variable in each iteration and the user typed expressions for the loop.
-    final extracted = switch _function.expr
-    {
-        case EFunction(_, f):
-            {
-                name : if (f.args.length == 0) '_tmpEnt' else f.args[0].name,
-                expr : switch extractFunctionBlock(f.expr)
-                {
-                    case Some(v): v;
-                    case None: Context.error('Unable to extract EBlock from function', f.expr.pos);
-                }
-            };
-        case EBlock(exprs):
-            { name : '_tmpEnt', expr : exprs };
-        case other:
-            Context.error('Unsupported iterate expression $other', _function.pos);
-    }
-
-    // Based on the family name and this systems name search all registered families for a match
-    final clsKey     = '${ Context.getLocalType().toComplexType().toString() }-${ familyIdent }';
-    final components = switch getFamilyByKey(clsKey)
-    {
-        case Some(family): family.components;
-        case None: Context.error('Unable to find a family with the key $clsKey', _family.pos);
-    }
-
-    // Generate a local variable with the requested name for each component in the family.
-    // Then append the user typed for loop expression to ensure the variables are always accessible
-    final forExpr = [];
-    for (c in components)
-    {
-        final varName   = c.name;
-        final tableName = makeTableName(c.type);
-
-        // Defining a component in a family as '_' will skip the variable generation.
-        if (varName != '_')
-        {
-            forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
-        }
-    }
-    for (e in extracted.expr)
-    {
-        forExpr.push(e);
-    }
-
-    return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
 }
 
 /**
@@ -210,7 +141,7 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
  * @param _pos Context.currentPos()
  * @return Either the found field or the newly creatd one.
  */
-function getOrCreateOverrideFunction(_name : String, _fields : Array<Field>, _pos : Position)
+private function getOrCreateOverrideFunction(_name : String, _fields : Array<Field>, _pos : Position)
 {
     for (field in _fields)
     {
@@ -236,7 +167,7 @@ function getOrCreateOverrideFunction(_name : String, _fields : Array<Field>, _po
  * @param _field Field to insert in, must be a FFun EBlock field.
  * @param _expr Expression to insert.
  */
-function insertExprIntoFunction(_pos : Int, _field : Field, _expr : Expr)
+private function insertExprIntoFunction(_pos : Int, _field : Field, _expr : Expr)
 {
     switch _field.kind
     {
@@ -255,7 +186,7 @@ function insertExprIntoFunction(_pos : Int, _field : Field, _expr : Expr)
  * @param _field Field to check.
  * @param _meta Meta data name.
  */
-function hasMeta(_field : Field, _meta : String)
+private function hasMeta(_field : Field, _meta : String)
 {
     if (_field.meta == null || _field.meta.length == 0)
     {
@@ -280,7 +211,7 @@ function hasMeta(_field : Field, _meta : String)
  * @param _field Field to check.
  * @return Result<FamilyDefinition, String>
  */
-function extractFastFamily(_field : Field)
+private function extractFastFamily(_field : Field)
 {
     return switch _field.kind
     {
@@ -302,7 +233,7 @@ function extractFastFamily(_field : Field)
  * @param _field Field to check.
  * @return Result<FamilyDefinition, String>
  */
-function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyError>
+private function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyError>
 {
     return switch _field.kind
     {
@@ -323,7 +254,8 @@ function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyErro
                         .find(f -> f.field == 'resources')
                         .let(f -> switch f.expr.expr
                             {
-                                case EArrayDecl(values): extractFamilyResources(values);
+                                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
+                                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
                                 case other: Error({ message : 'Unexpected object field expression $other', pos : f.expr.pos });
                             })
                         .or(Ok([]));
@@ -354,7 +286,7 @@ function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyErro
  * @param _fields Object fields to search through.
  * @return Result<ReadOnlyArray<FamilyField>, Exception>
  */
-function extractFamilyComponentsFromObject(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
+private function extractFamilyComponentsFromObject(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
 {
     final extracted = new Array<FamilyField>();
 
@@ -385,7 +317,7 @@ function extractFamilyComponentsFromObject(_fields : Array<ObjectField>) : Resul
  * @param _values 
  * @return Result<ReadOnlyArray<FamilyField>, FamilyError>
  */
-function extractFamilyComponentsFromArray(_values : Array<Expr>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
+private function extractFamilyComponentsFromArray(_values : Array<Expr>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
 {
     final extracted = new Array<FamilyField>();
 
@@ -408,36 +340,12 @@ function extractFamilyComponentsFromArray(_values : Array<Expr>) : Result<ReadOn
 }
 
 /**
- * Given an array of expressions it will extract all `EConst(CIdent(_))` names into family types.
- * If an expression not of that type is found it will return with an error.
- * @param _exprs Expressions to read.
- * @return Result<ReadOnlyArray<FamilyType>, FamilyError>
- */
-function extractFamilyResources(_exprs : Array<Expr>) : Result<ReadOnlyArray<FamilyType>, FamilyError>
-{
-    final types = new Array<FamilyType>();
-
-    for (e in _exprs)
-    {
-        switch e.expr
-        {
-            case EConst(CIdent(s)): types.push({ type : s });
-            case other: Error({ message : 'Unexpected expression type $other', pos : e.pos });
-        }
-    }
-
-    types.sort(sort);
-
-    return Ok(types);
-}
-
-/**
  * Given a number of families returns all unique components requested by all of them.
  * This function checks by type not component variable name.
  * @param _families Families to search.
  * @return ReadOnlyArray<FamilyField>
  */
-function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<FamilyField>
+private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<FamilyField>
 {
     final components = new Array<FamilyField>();
 
@@ -456,36 +364,11 @@ function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : Read
 }
 
 /**
- * Given an expression it will try and extract the EBlock expressions acting as if it is a function expression.
- * It expects an `EMeta(EReturn(EBlock))` expression three.
- * @param _expr Expression to operate on.
- * @return Option<Array<Expr>>
- */
-function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
-{
-    return switch _expr.expr
-    {
-        case EMeta(_, e):
-            switch e.expr
-            {
-                case EReturn(e):
-                    switch e.expr
-                    {
-                        case EBlock(exprs): Some(exprs);
-                        case _: None;
-                    }
-                case _: None;
-            }
-        case _: None;
-    }
-}
-
-/**
  * Function to sort two objects based on a name field.
  * @param o1 Object 1.
  * @param o2 Object 2.
  */
-function sort(o1 : Dynamic, o2 : Dynamic)
+private function sort(o1 : Dynamic, o2 : Dynamic)
 {
     final name1 = o1.type;
     final name2 = o2.type;
@@ -501,5 +384,3 @@ function sort(o1 : Dynamic, o2 : Dynamic)
 
     return 0;
 }
-
-function makeTableName(_type : String) return 'table$_type';

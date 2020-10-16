@@ -21,16 +21,9 @@ class ComponentManager
      */
     public final flags : Vector<Bits>;
 
-    public final onComponentsAdded : Signal<Entity>;
-
-    public final onComponentsRemoved : Signal<Entity>;
-
     public function new(_entities)
     {
-        entities            = _entities;
-        onComponentsAdded   = new Signal();
-        onComponentsRemoved = new Signal();
-
+        entities   = _entities;
         flags      = new Vector(_entities.capacity());
         components = createComponentVector();
 
@@ -40,8 +33,6 @@ class ComponentManager
         {
             flags[i] = new Bits();
         }
-
-        entities.onEntityRemoved.subscribe(removeAllComponents);
     }
 
     /**
@@ -65,10 +56,8 @@ class ComponentManager
         flags[_entity.id()].unset(_id);
     }
 
-    function removeAllComponents(_entity : Entity)
+    public function clear(_entity : Entity)
     {
         flags[_entity.id()].clear();
-
-        onComponentsRemoved.notify(_entity);
     }
 }

@@ -3,20 +3,15 @@ import systems.VelocitySystem;
 import components.Components.Position;
 import components.Components.Velocity;
 
-using ecs.macros.ComponentMacros;
+using ecs.macros.UniverseMacros;
 
 function main()
 {
     final universe = new Universe(1024);
-    final object   = universe.entities.create();
+    final object   = universe.createEntity();
     
-    universe.systems.add(new VelocitySystem(
-        universe.families,
-        universe.entities,
-        universe.components,
-        universe.resources));
-
-    universe.components.setComponents(object,
+    universe.setSystems(VelocitySystem);
+    universe.setComponents(object,
         Position,
         new Velocity(1, 1));
 

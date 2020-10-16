@@ -1,26 +1,12 @@
 package ecs;
 
-import ecs.core.EntityManager;
-import ecs.core.FamilyManager;
-import ecs.core.ResourceManager;
-import ecs.core.ComponentManager;
-
 @:autoBuild(ecs.macros.SystemMacros.familyConstruction()) class System
 {
-	final families : FamilyManager;
+	final universe : Universe;
 
-	final entities : EntityManager;
-	
-	final components : ComponentManager;
-
-	final resources : ResourceManager;
-
-	public function new(_families, _entities, _components, _resources)
+	public function new(_universe)
 	{
-		families   = _families;
-		entities   = _entities;
-		components = _components;
-		resources  = _resources;
+		universe = _universe;
 	}
 
 	public function onAdded()

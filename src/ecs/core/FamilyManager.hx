@@ -19,11 +19,6 @@ class FamilyManager
         families   = createFamilyVector();
 
         setupFamilies(_size);
-
-        components.onComponentsAdded.subscribe(onComponentsAdded);
-        components.onComponentsRemoved.subscribe(onComponentsRemoved);
-        resources.onResourcesAdded.subscribe(onResourcesAdded);
-        resources.onResourcesRemoved.subscribe(onResourcesRemoved);
     }
 
     public function get(_index : Int)
@@ -31,20 +26,15 @@ class FamilyManager
         return families[_index];
     }
 
-    function onComponentsAdded(_entity : Entity)
+    public function tryActivate(_id : Int)
     {
-        final compFlags = components.flags[_entity.id()];
-
-        for (family in families)
+        if (!families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
         {
-            if (compFlags.areSet(family.componentsMask))
-            {
-                family.add(_entity);
-            }
-		}
+            families[_id].activate();
+        }
     }
 
-    function onComponentsRemoved(_entity : Entity)
+    public function whenEntityDestroyed(_entity : Entity)
     {
         final compFlags = components.flags[_entity.id()];
 
@@ -53,28 +43,6 @@ class FamilyManager
             if (!compFlags.areSet(family.componentsMask))
             {
                 family.remove(_entity);
-            }
-        }
-    }
-
-    function onResourcesAdded(_)
-    {
-        for (family in families)
-        {
-            if (!family.isActive() && resources.flags.areSet(family.resourcesMask))
-            {
-                family.activate();
-            }
-        }
-    }
-
-    function onResourcesRemoved(_)
-    {
-        for (family in families)
-        {
-            if (family.isActive() && !resources.flags.areSet(family.resourcesMask))
-            {
-                family.deactivate();
             }
         }
     }

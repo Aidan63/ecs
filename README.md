@@ -6,6 +6,8 @@ All components and families are resolved at compile time allowing entities and c
 
 Inspired / ideas stolen from [clay_ecs](https://github.com/RudenkoArts/clay_ecs/) and [baldrick](https://github.com/hamaluik/baldrick).
 
+Requires Haxe 4.2 nightlies as well as the safety and bits library.
+
 - [Quick Example](#--quick-example--)
 - [Advance Usage](#--advance-usage--)
   + [Iterate](#--iterate--)
@@ -59,7 +61,7 @@ Families are groups of components we are interested in, as components are added 
 package systems;
 
 import ecs.System;
-import ecs.macros.SystemMacros.iterate;
+import ecs.macros.UniverseMacros;
 import components.Components.Position;
 import components.Components.Velocity;
 
@@ -89,33 +91,29 @@ import systems.VelocitySystem;
 import components.Components.Position;
 import components.Components.Velocity;
 
-using ecs.macros.ComponentMacros;
+using ecs.macros.UniverseMacros;
 
 function main()
 {
     final universe = new Universe(1024);
-    final object   = universe.entities.create();
+    final object   = universe.createEntity();
     
-    univse.systems.add(new VelocitySystem(
-        universe.families,
-        universe.entities,
-        universe.components,
-        universe.resources));
+    univse.addSystem(VelocitySystem);
 
-    universe.components.setComponents(object,
+    universe.setComponents(object,
         Position,
         new Velocity(1, 1));
 
     for (_ in 0...120)
     {
-        universe.systems.update(1 / 60);
+        universe.update(1 / 60);
     }
 }
 ```
 
 The function `setComponents` is a macro which eases the process of adding multiple components and notifying the required families about changes. If a component has a constructor with no parameters you can just enter its type and the new call will be generated for you. Constructors, fields, and function calls are also allowed in the macro. If you add a component which isn't used by any family the compiler will emit a warning and that expression will be skipped.
 
-The universe can then be ticked forward by calling the `update` function on the systems object. Systems are currently iterated upon in the order they were added. See future additions and details at the bottom of this README for possible changes / improvements to this.
+The universe can then be ticked forward by calling the `update`. Systems are currently iterated upon in the order they were added. See future additions and details at the bottom of this README for possible changes / improvements to this.
 
 This example can be found in the `sample` directory of this repository, it can be ran with `haxe run.hxml`, the universe will be ticked forward 120 times and the velocity system will update the entities position and print out the result along the way.
 
@@ -176,31 +174,31 @@ class BulletCollisionSystem extends System
 Resources are components which are attached to the universe instead of entities. They can be required by families and are very useful for data which could be considered "singleton" in nature (e.g. current level data).
 
 ```haxe
-using ecs.macros.ResourceMacros;
+import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
     @:fullFamily var myFamily = {
         requires : { comp : SomeComp },
-        resources : [ MyResourceType ]
+        resources : { myRes : MyResourceType }
     };
 
     override function update(_dt : Float)
     {
-        iterate(myFamily, {
-            final myRes = resources.getByType(MyResourceType);
+        setup(myFamily, {
+            // myRes is avaialble in this block.
 
-            // do stuff with the components and resources.
+            iterate(myFamily, {
+                // do stuff with the components and resources.
+            });
         });
     }
 }
 ```
 
-Using the `fullFamily` meta instead of `fastFamily` allows us to define resources which are required for the family to run. When iterating over the family we can safely use the `getByType` resource macro to get the resource object.
+Using the `fullFamily` meta instead of `fastFamily` allows us to define resources which are required for the family to run. In the same way that `iterate` automatically creates variables for components `setup` create variables for any resources in that family.
 
-:warning: If the requested resources are not currently in the universe then no iterations will be performed even if there are entities which have all the required components. This is why we do not need to do any checks inside the `iterate` macro when accessing resources requested by the family.
-
-:information_source: There is not currently a way to have resource variables be automatically generated in the same way components are. This may change in the future.
+If the resources requested by a family are not currently all in the universe then the code block passed to `setup` will not be ran.
 
 ### **Family Definition**
 
@@ -211,7 +209,7 @@ The `fastFamily` meta provides an easy way to define a family which only require
 :information_source: `fastFamily` does not provide any runtime speed increases over `fullFamily`, the fast comes from the fact that its faster to type when your family only needs components.
 
 ```haxe
-import ecs.macros.SystemMacros.iterate;
+import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
@@ -235,56 +233,50 @@ class MySystem extends System
 
 #### **FullFamily**
 
-The `fullFamily` meta allows defining families which require both components and resources. Variables tagged with this meta must be an object declaration which has a `requires` and `resources` field. The `requires` field is for defining what components are needed and follows all the same rules outlined in the above `fastFamily` section, the `resources` field should be an array of type identifiers.
+The `fullFamily` meta allows defining families which require both components and resources. Variables tagged with this meta must be an object declaration which has a `requires` and `resources` field. The `requires` field is for defining what components are needed and follows all the same rules outlined in the above `fastFamily` section.
 
 ```haxe
-import ecs.macros.SystemMacros.iterate;
-
-using ecs.macros.ResourceMacros;
+import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
     @:fastFamily myFamily = {
         requires : { pos : Position, vel : Velocity, _ : Sprite },
-        resources : [ MyResource ]
+        resources : { myRes : MyResource }
     };
 
     override function update(_dt : Float)
     {
-        iterate(myFamily, {
-            // `pos` and `vel` are two local variables accessible in this block.
-            // No local variable for the `Sprite` component will be generated.
+        setup(myFamily, {
+            // This block will only be executed if `MyResource` is attached to the universe.
+            // a local variable `myRes` will also be accessible here.
 
-            final myRes = resources.getByType(MyResource);
+            iterate(myFamily, {
+                // `pos` and `vel` are two local variables accessible in this block.
+                // No local variable for the `Sprite` component will be generated.
+            });
         });
     }
 }
 ```
-
-:information_source: It is not currently possible to use object declaration for resources to get auto generated local variables for `iterate` macro functions.
 
 ### **Family Activation**
 
 You may find yourself wanting to run pre and post iterate code for the family as a whole in the update function. The following shows an example of this.
 
 ```haxe
-import ecs.macros.SystemMacros.iterate;
-
-using ecs.macros.ResourceMacros;
+import ecs.macros.UniverseMacros;
 
 class SpriteDrawerSystem extends System
 {
     @:fullFamily var sprites = {
         requires : { pos : Position, origin : Origin, spr : Sprite },
-        resources : [ Painter ]
+        resources : { painter : Painter }
     }
 
     override function update(_dt : Float)
     {
-        if (sprites.isActive())
-        {
-            final painter = resources.getByType(Painter);
-
+        setup(sprites, {
             painter.begin();
 
             iterate(sprites, {
@@ -294,17 +286,17 @@ class SpriteDrawerSystem extends System
                     pos.y,
                     origin.x,
                     origin.y);
-            })
+            });
 
             painter.end();
-        }
+        });
     }
 }
 ```
 
 The above is an example of what a drawing system might look like and how it would interface with some imaginary game engine. Here the `Painter` resource is some object from the game engine which allows efficient drawing through batching, but in order to do that you need to make a `begin` and `end` call.
 
-Families contain the `isActive` function, a family is said to be "active" if all the requested resources are in the universe. So by manually checking if the family is active we can safely access all the resources requested by the family, this allows us to call `begin` and `end` on the painter object and iterate over any entities within.
+The code within the `setup` block will only be ran if all the resources requested by the family we're setting up are currently attached to the systems universe. This macro also handles creating local variables with the names specified in the family definition so we can safely access our resources. We can also then `iterate` over that same family allowing us to run pre and post iterate code.
 
 ### **OnAdded and OnRemoved**
 
@@ -463,7 +455,9 @@ class VelocitySystem extends System
 
 ## Future Additions and Improvements
 
-Adding and removing systems to the universe is a bit of a pain needing to manually fill out the constructor parameters, could easily make a macro function similar to `setComponents` and `setResources`. Would also like a way to specify the update priority of a system, unsure if this should be able to be changed on the fly though.
+Need a better entity tracking / recycling setup, right now it will just fail when running out of entities.
+
+Would also like a way to specify the update priority of a system, unsure if this should be able to be changed on the fly though.
 
 I also really like the idea of phases from baldrick, an example of the api might be.
 
@@ -478,9 +472,5 @@ simPhase.set(VelocitySystem, CollisionSystem);
 drawPhase.set(WorldDrawerSystem, SpriteDrawerSystem, HudDrawerSystem);
 networkPhase.set(SnapshotGeneratorSystem)
 ```
-
-I want a better way of handling stuff like the painter example given in this README. Could probably make a new macro function but will have to think how it might integrate with the existing `iterate` macro if I add resource variable generation like components.
-
-Use of signals for communication between core objects could probably be reduced to just standard function calls with some clever macros.
 
 I've started but really need to build out a good test suite.

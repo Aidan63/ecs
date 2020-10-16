@@ -1,7 +1,5 @@
 -L safety
 -L bits
--L RxHaxe
--L haxe-concurrent
 -L buddy
 -D analyzer-optimize
 -p src

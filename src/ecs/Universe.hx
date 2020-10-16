@@ -22,4 +22,9 @@ class Universe
         families   = new FamilyManager(components, resources, _maxEntities);
         systems    = new SystemManager(components, resources, families);
     }
+
+    public function update(_dt : Float)
+    {
+        systems.update(_dt);
+    }
 }

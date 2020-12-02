@@ -4,5 +4,11 @@
   "classPath": "src",
   "releasenote": "",
   "url": "hhttps://github.com/Aidan63/ecs",
-  "dependencies": {}
+  "dependencies": {
+	  "promhx": "",
+	  "safety": "",
+	  "buddy": "",
+	  "bits": "",
+	  "asynctools": ""
+  }
 }

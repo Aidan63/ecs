@@ -1,0 +1,14 @@
+{
+  "name": "ecs",
+  "license": "MIT",
+  "classPath": "src",
+  "releasenote": "",
+  "url": "hhttps://github.com/Aidan63/ecs",
+  "dependencies": {
+	  "promhx": "",
+	  "safety": "",
+	  "buddy": "",
+	  "bits": "",
+	  "asynctools": ""
+  }
+}

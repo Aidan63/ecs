@@ -147,36 +147,27 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
                                 Context.warning(error, component.pos);
                         }
                 }
-            case EConst(c):
-                final ct = Context.typeof(component).toComplexType();
-
-                switch getComponentID(ct)
-                {
-                    case Some(id):
-                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
-                        for (familyID in getFamilyIDsWithComponent(id))
-                        {
-                            added.add(familyID);
-                        }
-                    case None:
-                        Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
-                }
-            case ENew(tp, _):
-                final ct = Context.getType(tp.name).toComplexType();
-
-                switch getComponentID(ct)
-                {
-                    case Some(id):
-                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
-                        for (familyID in getFamilyIDsWithComponent(id))
-                        {
-                            added.add(familyID);
-                        }
-                    case None:
-                        Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
-                }
             case _:
-                Context.error('Unsupported component expression ${ component.toString() }', component.pos);
+                try
+                {
+                    final ct = Context.typeof(component).toComplexType();
+
+                    switch getComponentID(ct)
+                    {
+                        case Some(id):
+                            exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
+                            for (familyID in getFamilyIDsWithComponent(id))
+                            {
+                                added.add(familyID);
+                            }
+                        case None:
+                            Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
+                    }
+                }
+                catch (_)
+                {
+                    Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
+                }
         }
     }
 
@@ -336,36 +327,27 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
                                 Context.warning(error, resource.pos);
                         }
                 }
-            case EConst(c):
-                final ct = Context.typeof(resource).toComplexType();
-
-                switch getResourceID(ct)
-                {
-                    case Some(id):
-                        exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
-                        for (familyID in getFamilyIDsWithResource(id))
-                        {
-                            added.add(familyID);
-                        }
-                    case None:
-                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
-                }
-            case ENew(tp, _):
-                final ct = Context.getType(tp.name).toComplexType();
-
-                switch getResourceID(ct)
-                {
-                    case Some(id):
-                        exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
-                        for (familyID in getFamilyIDsWithResource(id))
-                        {
-                            added.add(familyID);
-                        }
-                    case None:
-                        Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
-                }
             case _:
-                Context.error('Unsupported resource expression ${ resource.toString() }', resource.pos);
+                try
+                {
+                    final ct = Context.typeof(resource).toComplexType();
+
+                    switch getResourceID(ct)
+                    {
+                        case Some(id):
+                            exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
+                            for (familyID in getFamilyIDsWithResource(id))
+                            {
+                                added.add(familyID);
+                            }
+                        case None:
+                            Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                    }
+                }
+                catch (_)
+                {
+                    Context.error('Unsupported resource expression ${ resource.toString() }', resource.pos);
+                }
         }
     }
 

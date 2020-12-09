@@ -98,7 +98,7 @@ function main()
     final universe = new Universe(1024);
     final object   = universe.createEntity();
     
-    univse.addSystem(VelocitySystem);
+    universe.setSystems(VelocitySystem); //setSystem is found by the static extension in `UniverseMacros`
 
     universe.setComponents(object,
         Position,

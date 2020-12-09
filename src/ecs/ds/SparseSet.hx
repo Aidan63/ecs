@@ -38,11 +38,11 @@ class SparseSet
 
         for (i in 0...sparse.length)
         {
-            sparse[i] = 0;
+            sparse[i] = -1;
         }
         for (i in 0...dense.length)
         {
-            dense[i] = new Entity(-1);
+            dense[i] = Entity.none;
         }
     }
 
@@ -52,12 +52,7 @@ class SparseSet
      */
     public function has(_entity : Entity)
     {
-        if (dense[sparse[_entity.id()]] == _entity)
-        {
-            return true;
-        }
-
-        return false;
+        return sparse[_entity.id()] < number && dense[sparse[_entity.id()]] == _entity;
     }
 
     /**

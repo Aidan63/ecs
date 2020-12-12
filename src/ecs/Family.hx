@@ -57,11 +57,6 @@ class Family
         }
     }
 
-    public function has(_entity)
-    {
-        return entities.has(_entity);
-    }
-
     public function activate()
     {
         if (!active)
@@ -107,19 +102,19 @@ private class FamilyIterator
 
     var idx : Int;
 
-    public function new(_set, _active)
+    public inline function new(_set, _active)
     {
         set    = _set;
         active = _active;
         idx    = 0;
     }
 
-    public function hasNext()
+    public inline function hasNext()
     {
         return active && idx < set.size();
     }
 
-    public function next()
+    public inline function next()
     {
         return set.getDense(idx++);
     }

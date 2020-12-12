@@ -1,0 +1,2 @@
+test.hxml
+--jvm tests/bin/jvm/out.jar

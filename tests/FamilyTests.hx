@@ -12,7 +12,7 @@ class FamilyTests extends BuddySuite
         describe('Family Tests', {
             describe('construction', {
                 it('will immediately activate the family if it requires no resources', {
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
 
                     family.isActive().should.be(true);
                 });
@@ -20,7 +20,7 @@ class FamilyTests extends BuddySuite
                     final bits = new Bits(4);
                     bits.set(0);
 
-                    final family = new Family(0, new Bits(), bits, 4);
+                    final family = new Family(0, new Bits(), bits, 8);
 
                     family.isActive().should.be(false);
                 });
@@ -28,7 +28,7 @@ class FamilyTests extends BuddySuite
             describe('entities', {
                 it('will publish added entities through the onEntityAdded signal if the family is activated', {
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
 
                     var id = -1;
                     family.onEntityAdded.subscribe(e -> id = e.id());
@@ -41,7 +41,7 @@ class FamilyTests extends BuddySuite
                     bits.set(0);
 
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), bits, 4);
+                    final family = new Family(0, new Bits(), bits, 8);
 
                     var id = -1;
                     family.onEntityAdded.subscribe(e -> id = e.id());
@@ -51,7 +51,7 @@ class FamilyTests extends BuddySuite
                 });
                 it('will not publish added entities through the onEntityAdded signal if the entity is already in the family', {
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
 
                     var id = 0;
                     family.onEntityAdded.subscribe(e -> id += e.id());
@@ -62,7 +62,7 @@ class FamilyTests extends BuddySuite
                 });
                 it('will publish removed entities through the onEntityRemoved signal if the family is activated', {
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
 
                     var id = -1;
                     family.onEntityRemoved.subscribe(e -> id = e.id());
@@ -76,7 +76,7 @@ class FamilyTests extends BuddySuite
                     bits.set(0);
 
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), bits, 4);
+                    final family = new Family(0, new Bits(), bits, 8);
 
                     var id = -1;
                     family.onEntityRemoved.subscribe(e -> id = e.id());
@@ -87,7 +87,7 @@ class FamilyTests extends BuddySuite
                 });
                 it('will not publish removed entities through the onEntityRemoved signal if the entity is not in the family', {
                     final entity = new Entity(7);
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
 
                     var id = 0;
                     family.onEntityRemoved.subscribe(e -> id += e.id());
@@ -104,7 +104,7 @@ class FamilyTests extends BuddySuite
                     final e1     = new Entity(5);
                     final e2     = new Entity(6);
                     final e3     = new Entity(7);
-                    final family = new Family(0, new Bits(), bits, 4);
+                    final family = new Family(0, new Bits(), bits, 8);
                     final added  = [];
                     
                     family.onEntityAdded.subscribe(e -> added.push(e));
@@ -122,7 +122,7 @@ class FamilyTests extends BuddySuite
                     final e1      = new Entity(5);
                     final e2      = new Entity(6);
                     final e3      = new Entity(7);
-                    final family  = new Family(0, new Bits(), new Bits(), 4);
+                    final family  = new Family(0, new Bits(), new Bits(), 8);
                     final removed = [];
 
                     family.onEntityRemoved.subscribe(e -> removed.push(e));
@@ -143,7 +143,7 @@ class FamilyTests extends BuddySuite
                     final e2 = new Entity(6);
                     final e3 = new Entity(7);
 
-                    final family = new Family(0, new Bits(), new Bits(), 4);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
                     family.add(e1);
                     family.add(e2);
                     family.add(e3);

@@ -1,0 +1,4 @@
+test.hxml
+-L hxnodejs
+-D js-es=6
+--js tests/bin/js/out.js

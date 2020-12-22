@@ -1,14 +1,14 @@
 -L safety
 -L bits
 -L buddy
+-L instrument
 -D analyzer-optimize
+-D coverage-lcov-reporter
+-D coverage-lcov-reporter=lcov.info
+-D reporter=buddy.reporting.XUnit2Reporter
 -p src
 -p tests
 -m Main
 --dce full
---macro Safety.safeNavigation('', true)
-
 --debug
---interp
-#--js tests/bin/out.js
-#--cpp tests/bin/cpp
+--macro instrument.Instrumentation.coverage([ 'ecs' ], [ 'src' ])

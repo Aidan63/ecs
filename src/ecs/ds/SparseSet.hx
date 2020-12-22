@@ -38,7 +38,7 @@ class SparseSet
 
         for (i in 0...sparse.length)
         {
-            sparse[i] = -1;
+            sparse[i] = 0;
         }
         for (i in 0...dense.length)
         {

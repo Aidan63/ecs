@@ -1,5 +1,8 @@
 # **ECS**
 
+[![Build Status](https://dev.azure.com/aidanlee63/ecs/_apis/build/status/Aidan63.ecs?branchName=master)](https://dev.azure.com/aidanlee63/ecs/_build/latest?definitionId=1&branchName=master)
+[![codecov](https://codecov.io/gh/Aidan63/ecs/branch/master/graph/badge.svg?token=JW7KTFU3M4)](https://codecov.io/gh/Aidan63/ecs)
+
 Macro powered entity component system for haxe. Many of the existing ECS libraries were very verbose and / or required extending / implementing some type for all components. I wasn't a fan of this so made my own.
 
 All components and families are resolved at compile time allowing entities and components to be stored in flat arrays. No dynamic lookup, reflection, or anything like that is used at runtime, so it should be reasonably performant.

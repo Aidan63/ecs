@@ -1,0 +1,3 @@
+test.hxml
+-D report-name=interp-tests
+--interp

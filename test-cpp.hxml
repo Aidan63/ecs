@@ -1,0 +1,3 @@
+test.hxml
+-D report-name=cpp-tests
+--cpp tests/bin/cpp

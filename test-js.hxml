@@ -1,0 +1,5 @@
+test.hxml
+-L hxnodejs
+-D js-es=6
+-D report-name=js-tests
+--js tests/bin/js/out.js

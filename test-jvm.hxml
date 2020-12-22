@@ -1,0 +1,3 @@
+test.hxml
+-D report-name=jvm-tests
+--jvm tests/bin/jvm/out.jar

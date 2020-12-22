@@ -3,7 +3,10 @@ strategy:
     'cpp':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        cd ((npx haxelib path hxcpp) 2>&1)[1]
+        echo npx haxelib path hxcpp
+        echo $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+
+        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
         npm install lix
         cd tools/hxcpp
         npx haxe compile.hxml
@@ -13,7 +16,7 @@ strategy:
     'cppia':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        cd ((npx haxelib path hxcpp) 2>&1)[1]
+        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
         npm install lix
         cd tools/hxcpp
         npx haxe compile.hxml
@@ -30,6 +33,8 @@ strategy:
         git checkout 1.11
         make
         sudo make install
+
+        # usr/local/lib isn't searched for shared objects by default.
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
         cd $(Build.SourcesDirectory)

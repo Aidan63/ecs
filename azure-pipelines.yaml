@@ -1,0 +1,58 @@
+strategy:
+  matrix:
+    'cpp':
+      cmd: |
+        # This is needed to manually build dev versions of hxcpp
+        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+        npm install lix
+        cd tools/hxcpp
+        npx haxe compile.hxml
+
+        cd $(Build.SourcesDirectory)
+        npx haxe test-cpp.hxml
+    'cppia':
+      cmd: |
+        # This is needed to manually build dev versions of hxcpp
+        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+        npm install lix
+        cd tools/hxcpp
+        npx haxe compile.hxml
+
+        cd $(Build.SourcesDirectory)
+        npx haxe host.hxml
+        npx haxe test-cppia.hxml
+    'hl':
+      cmd: |
+        # Manually build hashlink
+        sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
+        git clone https://github.com/HaxeFoundation/hashlink
+        cd hashlink
+        git checkout 1.11
+        make
+        make install
+
+        cd $(Build.SourcesDirectory)
+        npx haxe test-hl.hxml
+        hl tests/bin/hl/out.hl
+    'js':
+      cmd: |
+        npx haxe test-js.hxml
+        node tests/bin/js/out.js
+    'jvm':
+      cmd: |
+        npx haxe test-jvm.hxml
+        java -jar tests/bin/jvm/out.jar
+    'interp':
+      cmd: npx haxe test-interp.hxml
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '14.15.x'
+  - task: Npm@1
+    inputs:
+      command: 'ci'
+  - script: eval $(cmd)

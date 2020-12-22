@@ -3,9 +3,6 @@ strategy:
     'cpp':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        echo $(npx haxelib path hxcpp)
-        echo $(npx haxelib path hxcpp | head -1 | tr -d '\n')
-
         cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
         npm install lix
         cd tools/hxcpp
@@ -13,10 +10,11 @@ strategy:
 
         cd $(Build.SourcesDirectory)
         npx haxe test-cpp.hxml
+        ./tests/bin/cpp/Main-debug
     'cppia':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+        cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
         npm install lix
         cd tools/hxcpp
         npx haxe compile.hxml
@@ -24,6 +22,7 @@ strategy:
         cd $(Build.SourcesDirectory)
         npx haxe host.hxml
         npx haxe test-cppia.hxml
+        ./tests/bin/host/Host
     'hl':
       cmd: |
         # Manually build hashlink

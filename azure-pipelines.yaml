@@ -1,6 +1,7 @@
 strategy:
   matrix:
     'cpp':
+      name: cpp
       cmd: |
         # This is needed to manually build dev versions of hxcpp
         cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
@@ -12,6 +13,7 @@ strategy:
         npx haxe test-cpp.hxml
         ./tests/bin/cpp/Main-debug
     'cppia':
+      name: cppia
       cmd: |
         # This is needed to manually build dev versions of hxcpp
         cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
@@ -25,6 +27,7 @@ strategy:
         npx haxe test-cppia.hxml
         ./tests/bin/host/Host
     'hl':
+      name: hashlink
       cmd: |
         # Manually build hashlink
         sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
@@ -41,14 +44,17 @@ strategy:
         npx haxe test-hl.hxml
         hl tests/bin/hl/out.hl
     'js':
+      name: js
       cmd: |
         npx haxe test-js.hxml
         node tests/bin/js/out.js
     'jvm':
+      name: jvm
       cmd: |
         npx haxe test-jvm.hxml
         java -jar tests/bin/jvm/out.jar
     'interp':
+      name: interp
       cmd: npx haxe test-interp.hxml
 
 pool:
@@ -70,6 +76,7 @@ steps:
     inputs:
       testResultsFormat: XUnit
       testResultsFiles: '*-tests.xml'
+      testRunTitle: $(name)
       searchFolder: $(Build.SourcesDirectory)
       failTaskOnFailedTests: true
   - script: bash <(curl -s https://codecov.io/bash) -f lcov.info

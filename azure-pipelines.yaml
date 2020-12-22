@@ -3,7 +3,7 @@ strategy:
     'cpp':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+        cd ((npx haxelib path hxcpp) 2>&1)[1]
         npm install lix
         cd tools/hxcpp
         npx haxe compile.hxml
@@ -13,7 +13,7 @@ strategy:
     'cppia':
       cmd: |
         # This is needed to manually build dev versions of hxcpp
-        cd $(npx haxelib path hxcpp | tail -1 | tr -d '\n')
+        cd ((npx haxelib path hxcpp) 2>&1)[1]
         npm install lix
         cd tools/hxcpp
         npx haxe compile.hxml
@@ -29,7 +29,7 @@ strategy:
         cd hashlink
         git checkout 1.11
         make
-        make install
+        sudo make install
 
         cd $(Build.SourcesDirectory)
         npx haxe test-hl.hxml

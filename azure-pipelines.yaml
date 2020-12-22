@@ -22,11 +22,9 @@ strategy:
         npx haxe compile.hxml
 
         cd $(Build.SourcesDirectory)
-        mkdir tests/bin/cppia
+        mkdir -p tests/bin/cppia
         npx haxe host.hxml
         npx haxe test-cppia.hxml
-
-        cat tests/bin/cppia/out.cppia
 
         ./tests/bin/host/Host
     'hl':

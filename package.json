@@ -1,4 +1,8 @@
 {
+	"name": "ecs",
+	"version": "0.0.1",
+	"author": "",
+	"license": "MIT",
 	"devDependencies": {
 		"lix": "^15.9.0"
 	},

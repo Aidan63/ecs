@@ -30,6 +30,7 @@ strategy:
         git checkout 1.11
         make
         sudo make install
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
         cd $(Build.SourcesDirectory)
         npx haxe test-hl.hxml

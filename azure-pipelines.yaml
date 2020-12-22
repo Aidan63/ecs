@@ -20,6 +20,7 @@ strategy:
         npx haxe compile.hxml
 
         cd $(Build.SourcesDirectory)
+        mkdir tests/bin/cppa
         npx haxe host.hxml
         npx haxe test-cppia.hxml
         ./tests/bin/host/Host
@@ -55,9 +56,13 @@ pool:
 
 steps:
   - task: NodeTool@0
+    displayName: Node
     inputs:
       versionSpec: '14.15.x'
   - task: Npm@1
+    displayName: Restore
     inputs:
       command: 'ci'
   - script: eval $(cmd)
+    displayName: Run
+    

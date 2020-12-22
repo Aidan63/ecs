@@ -20,7 +20,7 @@ class Universe
         components = new ComponentManager(entities);
         resources  = new ResourceManager();
         families   = new FamilyManager(components, resources, _maxEntities);
-        systems    = new SystemManager(components, resources, families);
+        systems    = new SystemManager();
     }
 
     public function update(_dt : Float)

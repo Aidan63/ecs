@@ -3,7 +3,8 @@
 -L buddy
 -L instrument
 -D analyzer-optimize
--D coverage-console-file-summary-reporter
+-D coverage-lcov-reporter
+-D coverage-lcov-reporter=lcov.info
 -p src
 -p tests
 -m Main

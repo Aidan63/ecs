@@ -1,3 +1,4 @@
+import ecs.macros.Reports.printFullReport;
 import ecs.System;
 import ecs.Universe;
 import ecs.macros.UniverseMacros.setup;
@@ -21,17 +22,17 @@ class FamilyManagerTests extends BuddySuite
                 
                 world.setComponents(world.createEntity(), comp);
 
-                world.systems.update(1);
+                world.update(1);
                 comp.number.should.be(0);
 
                 world.setResources(TestResource1);
 
-                world.systems.update(1);
+                world.update(1);
                 comp.number.should.be(0);
 
                 world.setResources(TestResource2);
 
-                world.systems.update(1);
+                world.update(1);
                 comp.number.should.be(1);
             });
 

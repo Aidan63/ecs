@@ -20,7 +20,7 @@ strategy:
         npx haxe compile.hxml
 
         cd $(Build.SourcesDirectory)
-        mkdir tests/bin/cppa
+        mkdir tests/bin/cppia
         npx haxe host.hxml
         npx haxe test-cppia.hxml
         ./tests/bin/host/Host
@@ -65,4 +65,12 @@ steps:
       command: 'ci'
   - script: eval $(cmd)
     displayName: Run
-    
+  - task: PublishTestResults@2
+    displayName: Tests
+    inputs:
+      testResultsFormat: XUnit
+      testResultsFiles: '*-tests.xml'
+      searchFolder: $(Build.SourcesDirectory)
+      failTaskOnFailedTests: true
+  - script: bash <(curl -s https://codecov.io/bash) -f lcov.info
+    displayName: Coverage

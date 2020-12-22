@@ -1,3 +1,4 @@
 test.hxml
 -D dll_import=tests/bin/host/export_classes.info
+-D report-name=cppia-tests
 --cppia tests/bin/cppia/out.cppia

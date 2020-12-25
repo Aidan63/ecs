@@ -1,84 +1,101 @@
-strategy:
-  matrix:
-    'cpp':
-      name: cpp
-      cmd: |
-        # This is needed to manually build dev versions of hxcpp
-        cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
-        npm install lix
-        cd tools/hxcpp
-        npx haxe compile.hxml
+jobs:
+- job: unit_tests
+  strategy:
+    matrix:
+      'cpp':
+        name: cpp
+        cmd: |
+          # This is needed to manually build dev versions of hxcpp
+          cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
+          npm install lix
+          cd tools/hxcpp
+          npx haxe compile.hxml
 
-        cd $(Build.SourcesDirectory)
-        npx haxe test-cpp.hxml
-        ./tests/bin/cpp/Main-debug
-    'cppia':
-      name: cppia
-      cmd: |
-        # This is needed to manually build dev versions of hxcpp
-        cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
-        npm install lix
-        cd tools/hxcpp
-        npx haxe compile.hxml
+          cd $(Build.SourcesDirectory)
+          npx haxe test-cpp.hxml
+          ./tests/bin/cpp/Main-debug
+      'cppia':
+        name: cppia
+        cmd: |
+          # This is needed to manually build dev versions of hxcpp
+          cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
+          npm install lix
+          cd tools/hxcpp
+          npx haxe compile.hxml
 
-        cd $(Build.SourcesDirectory)
-        mkdir -p tests/bin/cppia
-        npx haxe host.hxml
-        npx haxe test-cppia.hxml
+          cd $(Build.SourcesDirectory)
+          mkdir -p tests/bin/cppia
+          npx haxe host.hxml
+          npx haxe test-cppia.hxml
 
-        ./tests/bin/host/Host
-    'hl':
-      name: hashlink
-      cmd: |
-        # Manually build hashlink
-        sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
-        git clone https://github.com/HaxeFoundation/hashlink
-        cd hashlink
-        git checkout 1.11
-        make
-        sudo make install
+          ./tests/bin/host/Host
+      'hl':
+        name: hashlink
+        cmd: |
+          # Manually build hashlink
+          sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
+          git clone https://github.com/HaxeFoundation/hashlink
+          cd hashlink
+          git checkout 1.11
+          make
+          sudo make install
 
-        # usr/local/lib isn't searched for shared objects by default.
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+          # usr/local/lib isn't searched for shared objects by default.
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
-        cd $(Build.SourcesDirectory)
-        npx haxe test-hl.hxml
-        hl tests/bin/hl/out.hl
-    'js':
-      name: js
-      cmd: |
-        npx haxe test-js.hxml
-        node tests/bin/js/out.js
-    'jvm':
-      name: jvm
-      cmd: |
-        npx haxe test-jvm.hxml
-        java -jar tests/bin/jvm/out.jar
-    'interp':
-      name: interp
-      cmd: npx haxe test-interp.hxml
+          cd $(Build.SourcesDirectory)
+          npx haxe test-hl.hxml
+          hl tests/bin/hl/out.hl
+      'js':
+        name: js
+        cmd: |
+          npx haxe test-js.hxml
+          node tests/bin/js/out.js
+      'jvm':
+        name: jvm
+        cmd: |
+          npx haxe test-jvm.hxml
+          java -jar tests/bin/jvm/out.jar
+      'interp':
+        name: interp
+        cmd: npx haxe test-interp.hxml
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+    - task: NodeTool@0
+      displayName: Node
+      inputs:
+        versionSpec: '14.15.x'
+    - task: Npm@1
+      displayName: Restore
+      inputs:
+        command: 'ci'
+    - script: eval $(cmd)
+      displayName: Run
+    - task: PublishTestResults@2
+      displayName: Tests
+      inputs:
+        testResultsFormat: XUnit
+        testResultsFiles: '*-tests.xml'
+        testRunTitle: $(name)
+        searchFolder: $(Build.SourcesDirectory)
+        failTaskOnFailedTests: true
+    - script: bash <(curl -s https://codecov.io/bash) -f lcov.info
+      displayName: Coverage
 
-pool:
-  vmImage: 'ubuntu-latest'
-
-steps:
-  - task: NodeTool@0
-    displayName: Node
-    inputs:
-      versionSpec: '14.15.x'
-  - task: Npm@1
-    displayName: Restore
-    inputs:
-      command: 'ci'
-  - script: eval $(cmd)
-    displayName: Run
-  - task: PublishTestResults@2
-    displayName: Tests
-    inputs:
-      testResultsFormat: XUnit
-      testResultsFiles: '*-tests.xml'
-      testRunTitle: $(name)
-      searchFolder: $(Build.SourcesDirectory)
-      failTaskOnFailedTests: true
-  - script: bash <(curl -s https://codecov.io/bash) -f lcov.info
-    displayName: Coverage
+- job: run_sample
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+    - task: NodeTool@0
+      displayName: Node
+      inputs:
+        versionSpec: '14.15.x'
+    - task: Npm@1
+      displayName: Restore
+      inputs:
+        command: 'ci'
+    - script: npx haxe run.hxml
+      displayName: Run
+      workingDirectory: $(Build.SourcesDirectory)/sample
+      failOnStderr: true

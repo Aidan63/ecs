@@ -1,7 +1,6 @@
 package ecs.macros;
 
 import haxe.macro.Expr;
-import haxe.macro.Context;
 import ecs.macros.ComponentCache;
 
 using Safety;
@@ -23,11 +22,11 @@ macro function setupComponents(_size : Expr)
 {
     final creation = [];
 
-    for (name => idx in getComponentMap())
+    for (key => value in getComponentMap())
     {
-        final ct = Context.getType(name).toComplexType();
+        final ct = value.type.toComplexType();
 
-        creation.push(macro components.set($v{ idx }, new ecs.Components<$ct>($e{ _size })));
+        creation.push(macro components.set($v{ value.id }, new ecs.Components<$ct>($e{ _size })));
     }
 
     return macro $b{ creation };

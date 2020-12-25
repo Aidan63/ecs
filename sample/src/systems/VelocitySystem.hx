@@ -7,7 +7,7 @@ import components.Components.Velocity;
 
 class VelocitySystem extends System
 {
-    @:fastFamily var movables = { pos : Position, vel : Velocity };
+    @:fastFamily var movables : { pos : Position, vel : Velocity };
 
     override function update(_dt : Float)
     {

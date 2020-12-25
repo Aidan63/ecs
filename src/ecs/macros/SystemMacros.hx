@@ -7,15 +7,28 @@ import ecs.ds.Result;
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.ComponentCache;
+import haxe.macro.Type;
 
 using Lambda;
 using Safety;
 using haxe.macro.Tools;
 
+/**
+ * Stores the user specified name and the complex type of a requested component or resource.
+ */
 typedef FamilyField = {
     final name : String;
-    final type : String;
-    var ?uID : Int;
+    final type : ComplexType;
+}
+
+/**
+ * Stores all the info on a registered component or resource.
+ */
+typedef RegisteredField = {
+    final name : String;
+    final type : Type;
+    final hash : String;
+    final uID : Int;
 }
 
 typedef FamilyError = {
@@ -32,12 +45,12 @@ typedef FamilyDefinition = {
     /**
      * All the static resources requested by this family.
      */
-    final resources : ReadOnlyArray<FamilyField>;
+    final resources : ReadOnlyArray<RegisteredField>;
 
     /**
      * All of the components requested by this family.
      */
-    final components : ReadOnlyArray<FamilyField>;
+    final components : ReadOnlyArray<RegisteredField>;
 }
 
 macro function familyConstruction() : Array<Field>
@@ -58,7 +71,17 @@ macro function familyConstruction() : Array<Field>
                 case Ok(data):
                     families.push({
                         name       : field.name,
-                        components : data,
+                        components : data.map(f -> {
+                            final resolved  = Context.resolveType(f.type, field.pos);
+                            final signature = Utils.signature(resolved);
+
+                            return {
+                                name : f.name,
+                                type : resolved,
+                                uID  : registerComponent(signature, resolved),
+                                hash : signature
+                            };
+                        }),
                         resources  : []
                     });
                 case Error(error): Context.error(error.message, error.pos);
@@ -68,8 +91,41 @@ macro function familyConstruction() : Array<Field>
         {
             switch extractFullFamily(field)
             {
-                case Ok(data): families.push(data);
-                case Error(error): Context.error(error.message, error.pos);
+                case Ok(data):
+                    families.push({
+                        name       : data.name,
+                        components : switch data.components
+                        {
+                            case Ok(array): array.map(f -> {
+                                final resolved  = Context.resolveType(f.type, field.pos);
+                                final signature = Utils.signature(resolved);
+
+                                return {
+                                    name : f.name,
+                                    type : resolved,
+                                    uID  : registerComponent(signature, resolved),
+                                    hash : signature
+                                };
+                            });
+                            case Error(error): Context.error(error.message, error.pos);
+                        },
+                        resources : switch data.resources
+                        {
+                            case Ok(array): array.map(f -> {
+                                final resolved  = Context.resolveType(f.type, field.pos);
+                                final signature = Utils.signature(resolved);
+
+                                return {
+                                    name : f.name,
+                                    type : resolved,
+                                    uID  : registerResource(signature),
+                                    hash : signature
+                                };
+                            });
+                            case Error(error): Context.error(error.message, error.pos);
+                        }
+                    });
+                case Error(error): Context.error(error.message, field.pos);
             }
         }
         else
@@ -91,30 +147,16 @@ macro function familyConstruction() : Array<Field>
         // Insert out `family.get` calls at the very top of the `onAdded` function.
         // This we we can always access them in a overridden `onAdded`.
 
-        final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ family.name }';
+        final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
 
         insertExprIntoFunction(idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
-    }
-
-    // Register all resources and components requested by each family.
-    for (family in families)
-    {
-        for (resource in family.resources)
-        {
-            resource.uID = registerResource(Context.getType(resource.type).toComplexType());
-        }
-
-        for (component in family.components)
-        {
-            component.uID = registerComponent(Context.getType(component.type).toComplexType());
-        }
     }
 
     // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
     for (idx => component in getUniqueComponents(families))
     {
-        final ct   = Context.getType(component.type).toComplexType();
-        final name = 'table${ component.type }';
+        final ct   = component.type.toComplexType();
+        final name = 'table${ component.hash }';
 
         output.push({
             name : name,
@@ -126,8 +168,7 @@ macro function familyConstruction() : Array<Field>
         insertExprIntoFunction(
             families.length + idx,
             added,
-            macro $i{ name } = cast universe.components.getTable($v{ component.uID })
-        );
+            macro $i{ name } = cast universe.components.getTable($v{ component.uID }));
     }
 
     return output;
@@ -215,13 +256,7 @@ private function extractFastFamily(_field : Field)
 {
     return switch _field.kind
     {
-        case FVar(_, expr):
-            switch expr.expr
-            {
-                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
-                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
-                case _: Error({ message : 'Unexpected variable expression ${ expr.toString() }, expected EObjectDecl', pos : expr.pos });
-            }
+        case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
         case other: Error({ message : 'Unexpected field kind $other, expected FVar', pos : _field.pos });
     }
 }
@@ -233,48 +268,33 @@ private function extractFastFamily(_field : Field)
  * @param _field Field to check.
  * @return Result<FamilyDefinition, String>
  */
-private function extractFullFamily(_field : Field) : Result<FamilyDefinition, FamilyError>
+private function extractFullFamily(_field : Field) : Result<{ name : String, components : Result<ReadOnlyArray<FamilyField>, FamilyError>, resources : Result<ReadOnlyArray<FamilyField>, FamilyError> }, FamilyError>
 {
     return switch _field.kind
     {
-        case FVar(_, expr):
-            switch expr.expr
-            {
-                case EObjectDecl(fields):
-                    final requires = fields
-                        .find(f -> f.field == 'requires')
-                        .let(f -> switch f.expr.expr
-                            {
-                                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
-                                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
-                                case other: Error({ message : 'Unexpected object field expression $other', pos : f.expr.pos });
-                            })
-                        .or(Ok([]));
-                    final resources = fields
-                        .find(f -> f.field == 'resources')
-                        .let(f -> switch f.expr.expr
-                            {
-                                case EObjectDecl(fields): extractFamilyComponentsFromObject(fields);
-                                case EArrayDecl(values): extractFamilyComponentsFromArray(values);
-                                case other: Error({ message : 'Unexpected object field expression $other', pos : f.expr.pos });
-                            })
-                        .or(Ok([]));
+        case FVar(TAnonymous(fields), _):
+            final requires = fields
+                .find(f -> f.name == 'requires')
+                .let(f -> switch f.kind
+                    {
+                        case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
+                        case other: Error({ message : 'Unexpected object field expression $other', pos : f.pos });
+                    })
+                .or(Ok([]));
+            final resources = fields
+                .find(f -> f.name == 'resources')
+                .let(f -> switch f.kind
+                    {
+                        case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
+                        case other: Error({ message : 'Unexpected object field expression $other', pos : f.pos });
+                    })
+                .or(Ok([]));
 
-                    Ok({
-                        name       : _field.name,
-                        components : switch requires
-                        {
-                            case Ok(data): data;
-                            case Error(error): return Error(error);
-                        },
-                        resources  : switch resources
-                        {
-                            case Ok(data): data;
-                            case Error(error): return Error(error);
-                        }
-                    });
-                case _: Error({ message : 'Unexpected variable expression ${ expr.toString() }, expected EObjectDec', pos : expr.pos });
-            }
+            Ok({
+                name       : _field.name,
+                components : requires,
+                resources  : resources
+            });
         case other: Error({ message : 'Unexpected field kind ${ other }, expected FVar', pos : _field.pos });
     }
 }
@@ -286,51 +306,21 @@ private function extractFullFamily(_field : Field) : Result<FamilyDefinition, Fa
  * @param _fields Object fields to search through.
  * @return Result<ReadOnlyArray<FamilyField>, Exception>
  */
-private function extractFamilyComponentsFromObject(_fields : Array<ObjectField>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
+private function extractFamilyComponentsFromObject(_fields : ReadOnlyArray<Field>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
 {
     final extracted = new Array<FamilyField>();
 
     for (field in _fields)
     {
-        switch field.expr.expr
+        switch field.kind
         {
-            case EConst(CIdent(s)):
+            case FVar(ct, _):
                 extracted.push({
-                    name : field.field,
-                    type : s
+                    name : field.name,
+                    type : ct
                 });
-            case _: return Error({ message : 'Unexpected expression ${ field.expr.toString() }, expected EConst(CIdent(_))', pos : field.expr.pos });
-        }
-    }
-
-    extracted.sort(sort);
-
-    return Ok(extracted);
-}
-
-/**
- * Extracts all the `EConst(CIdent(_))` names from an array of expressions.
- * Returned family fields are lexographically ordered by their name.
- * If any other expressions are found an error is returned.
- * Since this only checks for `CIdent` expressions the name of all returned components will be `_`,
- * this causes the `iterate` macro to not generate local variables for these components.
- * @param _values 
- * @return Result<ReadOnlyArray<FamilyField>, FamilyError>
- */
-private function extractFamilyComponentsFromArray(_values : Array<Expr>) : Result<ReadOnlyArray<FamilyField>, FamilyError>
-{
-    final extracted = new Array<FamilyField>();
-
-    for (value in _values)
-    {
-        switch value.expr
-        {
-            case EConst(CIdent(s)):
-                extracted.push({
-                    name : '_',
-                    type : s
-                });
-            case _: Error({ message : 'Unexpected expression ${ value.toString() }, expected EConst(CIdent(_))', pos : value.pos });
+            case other:
+                return Error({ message : 'Unexpected expression ${ other }, expected FVar(_, EConst(CIdent(_)))', pos : field.pos });
         }
     }
 
@@ -345,15 +335,15 @@ private function extractFamilyComponentsFromArray(_values : Array<Expr>) : Resul
  * @param _families Families to search.
  * @return ReadOnlyArray<FamilyField>
  */
-private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<FamilyField>
+private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<RegisteredField>
 {
-    final components = new Array<FamilyField>();
+    final components = new Array<RegisteredField>();
 
     for (family in _families)
     {
         for (component in family.components)
         {
-            if (!components.exists(f -> f.type == component.type))
+            if (!components.exists(f -> f.uID == component.uID))
             {
                 components.push(component);
             }

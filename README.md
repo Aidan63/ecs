@@ -70,7 +70,7 @@ import components.Components.Velocity;
 
 class VelocitySystem extends System
 {
-    @:fastFamily var movables = { pos : Position, vel : Velocity };
+    @:fastFamily var movables : { pos : Position, vel : Velocity };
 
     override function update(_dt : Float)
     {
@@ -157,9 +157,9 @@ In the below example both the `bullets` and `enemies` families request the `Posi
 ```haxe
 class BulletCollisionSystem extends System
 {
-    @:fastFamily bullets = { bulletPos : Position, bulletBox : BBox, bullet : Bullet };
+    @:fastFamily bullets : { bulletPos : Position, bulletBox : BBox, bullet : Bullet };
 
-    @:fastFamily enemies = { enemyPos : Position, enemyBox : BBox, enemy : Enemy };
+    @:fastFamily enemies : { enemyPos : Position, enemyBox : BBox, enemy : Enemy };
 
     override function update(_dt : Float)
     {
@@ -181,7 +181,7 @@ import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
-    @:fullFamily var myFamily = {
+    @:fullFamily var myFamily : {
         requires : { comp : SomeComp },
         resources : { myRes : MyResourceType }
     };
@@ -207,7 +207,7 @@ If the resources requested by a family are not currently all in the universe the
 
 #### **FastFamily**
 
-The `fastFamily` meta provides an easy way to define a family which only requires components. Variables tagged with this meta must then be assigned an object or array declaration. If you are using object declaration local variable generation can be skipped on a per-component basis by using `_` as the name.
+The `fastFamily` meta provides an easy way to define a family which only requires components. Variables tagged with this meta must then be assigned an anonymous object type. Using object declaration local variable generation can be skipped on a per-component basis by using `_` as the name.
 
 :information_source: `fastFamily` does not provide any runtime speed increases over `fullFamily`, the fast comes from the fact that its faster to type when your family only needs components.
 
@@ -216,19 +216,13 @@ import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
-    @:fastFamily myFamily1 = { pos : Position, vel : Velocity, _ : Sprite };
-
-    @:fastFamily myFamily2 = [ Position, Velocity ];
+    @:fastFamily myFamily1 : { pos : Position, vel : Velocity, _ : Sprite };
 
     override function update(_dt : Float)
     {
         iterate(myFamily1, {
             // `pos` and `vel` are two local variables accessible in this block.
             // No local variable for the `Sprite` component will be generated.
-        });
-
-        iterate(myFamily2, {
-            // No local variables are generated when a family uses array declaration.
         });
     }
 }
@@ -243,7 +237,7 @@ import ecs.macros.UniverseMacros;
 
 class MySystem extends System
 {
-    @:fastFamily myFamily = {
+    @:fastFamily myFamily : {
         requires : { pos : Position, vel : Velocity, _ : Sprite },
         resources : { myRes : MyResource }
     };
@@ -272,7 +266,7 @@ import ecs.macros.UniverseMacros;
 
 class SpriteDrawerSystem extends System
 {
-    @:fullFamily var sprites = {
+    @:fullFamily var sprites : {
         requires : { pos : Position, origin : Origin, spr : Sprite },
         resources : { painter : Painter }
     }
@@ -308,7 +302,7 @@ The `ecs.System` type contains `onAdded` and `onRemoved` functions which can be 
 ```haxe
 class MySystem extends System
 {
-    @:fastFamily var myFamily = [ SomeComponent ];
+    @:fastFamily var myFamily : { _ : SomeComponent };
 
     override function onAdded()
     {
@@ -329,7 +323,7 @@ Families also expose two signals you can subscribe to for when entities are adde
 ```haxe
 class MySystem extends System
 {
-    @:fastFamily var myFamily = [ SomeComponent ];
+    @:fastFamily var myFamily : { _ : SomeComponent };
 
     override function onAdded()
     {
@@ -374,9 +368,9 @@ Systems have field variables injected into them based on all families defined, f
 ```haxe
 class MySystem extends System
 {
-    @:fastFamily var myFamily = { pos : Position, vel : Velocity };
+    @:fastFamily var myFamily : { pos : Position, vel : Velocity };
 
-    @:fastFamily var justPos = { pos : Position };
+    @:fastFamily var justPos : { pos : Position };
 }
 ```
 
@@ -410,7 +404,7 @@ When calling `iterate` it generates a for loop with local variables based on the
 ```haxe
 class VelocitySystem extends System
 {
-    @:fastFamily var movables = { pos : Position, vel : Velocity };
+    @:fastFamily var movables : { pos : Position, vel : Velocity };
 
     override function update(_dt : Float)
     {

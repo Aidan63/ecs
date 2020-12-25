@@ -1,10 +1,8 @@
 package ecs.macros;
 
 import haxe.ds.Option;
-import haxe.macro.Expr.ComplexType;
 
 using Safety;
-using haxe.macro.ComplexTypeTools;
 
 private final resources = new Map<String, Int>();
 
@@ -28,13 +26,11 @@ function getResourceMap()
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function getResourceID(_ct : ComplexType) : Option<Int>
+function getResourceID(_hash : String) : Option<Int>
 {
-    final name = _ct.toString();
-
-    return if (resources.exists(name))
+    return if (resources.exists(_hash))
     {
-        Some(resources.get(name));
+        Some(resources.get(_hash));
     }
     else
     {
@@ -42,20 +38,18 @@ function getResourceID(_ct : ComplexType) : Option<Int>
     }
 }
 
-function registerResource(_ct : ComplexType)
+function registerResource(_hash : String)
 {
-    final name = _ct.toString();
-
-    return if (!resources.exists(name))
+    return if (!resources.exists(_hash))
     {
         final id = resourceIncrementer++;
 
-        resources.set(name, id);
+        resources.set(_hash, id);
 
         id;
     }
     else
     {
-        resources.get(name).unsafe();
+        resources.get(_hash).unsafe();
     }
 }

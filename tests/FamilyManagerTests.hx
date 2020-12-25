@@ -1,4 +1,3 @@
-import ecs.macros.Reports.printFullReport;
 import ecs.System;
 import ecs.Universe;
 import ecs.macros.UniverseMacros.setup;
@@ -104,9 +103,9 @@ class TestSystem extends System
 {
     public var counter : Int;
 
-    @:fullFamily var family = {
+    @:fullFamily var family : {
         requires  : { comp : TestComponent1 },
-        resources : [ TestResource1, TestResource2 ]
+        resources : { _ : TestResource1, _ : TestResource2 }
     }
 
     override function onAdded()
@@ -128,7 +127,7 @@ class TestResourceAccessSystem extends System
 {
     public var counter = 0;
 
-    @:fullFamily var family = {
+    @:fullFamily var family : {
         requires  : { comp : TestComponent1 },
         resources : { res : TestResource1 }
     }

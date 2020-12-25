@@ -1,11 +1,11 @@
 package ecs.macros;
 
 import haxe.ds.Option;
-import haxe.macro.Expr.ComplexType;
+import haxe.macro.Type;
 
-using haxe.macro.ComplexTypeTools;
+using Safety;
 
-private final components = new Map<String, Int>();
+private final components = new Map<String, { id : Int, type : Type }>();
 
 private var componentIncrementer = 0;
 
@@ -27,19 +27,17 @@ function getComponentMap()
  * If this type has not yet been seen the returned integer is stored for future lookups.
  * @param _ct ComplexType to get ID for.
  */
-function registerComponent(_type : ComplexType)
+function registerComponent(_hash : String, _type : Type) : Int
 {
-    final name = _type.toString();
-
-    return if (components.exists(name))
+    return if (components.exists(_hash))
     {
-        components.get(name);
+        components.get(_hash).unsafe().id;
     }
     else
     {
         final id = componentIncrementer++;
 
-        components.set(name, id);
+        components.set(_hash, { id : id, type : _type });
 
         id;
     }
@@ -51,13 +49,11 @@ function registerComponent(_type : ComplexType)
  * @param _type Complex type of the component.
  * @return Option<Int>
  */
-function getComponentID(_type : ComplexType) : Option<Int>
+function getComponentID(_type : String) : Option<Int>
 {
-    final name = _type.toString();
-
-    return if (components.exists(name))
+    return if (components.exists(_type))
     {
-        Some(components.get(name));
+        Some(components.get(_type).unsafe().id);
     }
     else
     {

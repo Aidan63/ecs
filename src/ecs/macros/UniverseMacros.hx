@@ -110,58 +110,54 @@ macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
  */
 macro function setComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs = [ macro final _ecsTmpEntity = $e{ _entity } ];
-    final added = new Set();
+    final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added  = new Set();
+    final insert = (id, compExpr) -> {
+        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ compExpr }));
+        for (familyID in getFamilyIDsWithComponent(id))
+        {
+            added.add(familyID);
+        }
+    }
 
     for (component in _components)
     {
         switch component.expr
         {
             case EConst(CIdent(s)):
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    getComponentID)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.warning('Component $ct is not used in any families', component.pos);
-                    case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
-                        for (familyID in getFamilyIDsWithComponent(id))
+                    case Some(type):
+                        switch getComponentID(Utils.signature(type))
                         {
-                            added.add(familyID);
+                            case Some(id): insert(id, component);
+                            case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
                         }
-                    case NotFound:
-                        switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getComponentID)
+                    case None:
+                        final resolved  = Context.getType(s);
+                        final signature = Utils.signature(resolved);
+
+                        switch getComponentID(signature)
                         {
-                            case Ok(result):
-                                final id = result.id;
-                                final tp = result.tp;
-                                exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, new $tp()));
-                                for (familyID in getFamilyIDsWithComponent(id))
+                            case Some(id):
+                                switch resolved.toComplexType()
                                 {
-                                    added.add(familyID);
+                                    case TPath(tp): insert(id, macro new $tp());
+                                    case other: Context.error('Component $other should be TPath', component.pos);
                                 }
-                            case Error(error):
-                                Context.warning(error, component.pos);
+                            case None: Context.warning('Component $resolved is not used in any families', component.pos);
                         }
                 }
             case _:
                 try
                 {
-                    final ct = Context.typeof(component).toComplexType();
+                    final resolved  = Context.typeof(component);
+                    final signature = Utils.signature(resolved);
 
-                    switch getComponentID(ct)
+                    switch getComponentID(signature)
                     {
-                        case Some(id):
-                            exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ component }));
-                            for (familyID in getFamilyIDsWithComponent(id))
-                            {
-                                added.add(familyID);
-                            }
-                        case None:
-                            Context.warning('Component ${ ct.toString() } is not used in any families', component.pos);
+                        case Some(id): insert(id, component);
+                        case None: Context.warning('Component ${ resolved } is not used in any families', component.pos);
                     }
                 }
                 catch (_)
@@ -202,43 +198,40 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
  */
 macro function removeComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs = [ macro final _ecsTmpEntity = $e{ _entity } ];
-    final added = new Set();
+    final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added  = new Set();
+    final insert = id -> {
+        exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
+        for (familyID in getFamilyIDsWithComponent(id))
+        {
+            added.add(familyID);
+        }
+    };
 
     for (component in _components)
     {
         switch component.expr
         {
             case EConst(CIdent(s)):
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    getComponentID)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.warning('Component $ct is not used in any families', component.pos);
-                    case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
-                        for (familyID in getFamilyIDsWithComponent(id))
+                    case Some(type):
+                        switch getComponentID(Utils.signature(type))
                         {
-                            added.add(familyID);
+                            case Some(id): insert(id);
+                            case None: Context.warning('Component ${ type } is not used in any families', component.pos);
                         }
-                    case NotFound:
-                        switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getComponentID)
+                    case None:
+                        final resolved  = Context.getType(s);
+                        final signature = Utils.signature(resolved);
+
+                        switch getComponentID(signature)
                         {
-                            case Ok(result):
-                                exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ result.id }));
-                                for (familyID in getFamilyIDsWithComponent(result.id))
-                                {
-                                    added.add(familyID);
-                                }
-                            case Error(error):
-                                Context.warning(error, component.pos);
+                            case Some(id): insert(id);
+                            case None: Context.warning('Component ${ resolved } is not used in any families', component.pos);
                         }
                 }
-            case _:
-                Context.error('Unsupported component expression ${ component.toString() }', component.pos);
+            case _: Context.error('Unsupported component expression ${ component.toString() }', component.pos);
         }
     }
 
@@ -290,63 +283,59 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
  */
 macro function setResources(_universe : Expr, _resources : Array<Expr>)
 {
-    final exprs = [];
-    final added = new Set();
+    final exprs  = [];
+    final added  = new Set();
+    final insert = (id, resExpr) -> {
+        exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resExpr }));
+        for (familyID in getFamilyIDsWithResource(id))
+        {
+            added.add(familyID);
+        }
+    };
 
     for (resource in _resources)
     {
         switch resource.expr
         {
             case EConst(CIdent(s)):
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    getResourceID)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.warning('Resource $ct is not used in any families', resource.pos);
-                    case UsableExpr(id):
-                        exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
-                        for (familyID in getFamilyIDsWithResource(id))
+                    case Some(type):
+                        switch getResourceID(Utils.signature(type))
                         {
-                            added.add(familyID);
+                            case Some(id): insert(id, resource);
+                            case None: Context.warning('Local ident $s : $type is not used in any families', resource.pos);
                         }
-                    case NotFound:
-                        switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getResourceID)
+                    case None:
+                        final resolved  = Context.getType(s);
+                        final signature = Utils.signature(resolved);
+
+                        switch getResourceID(signature)
                         {
-                            case Ok(result):
-                                final id = result.id;
-                                final tp = result.tp;
-                                exprs.push(macro $e{ _universe }.resources.insert($v{ id }, new $tp()));
-                                for (familyID in getFamilyIDsWithResource(id))
+                            case Some(id):
+                                switch resolved.toComplexType()
                                 {
-                                    added.add(familyID);
+                                    case TPath(tp): insert(id, macro new $tp());
+                                    case other: Context.error('Resource $other should be TPath', resource.pos);
                                 }
-                            case Error(error):
-                                Context.warning(error, resource.pos);
+                            case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
                         }
                 }
             case _:
                 try
                 {
-                    final ct = Context.typeof(resource).toComplexType();
+                    final resolved  = Context.typeof(resource);
+                    final signature = Utils.signature(resolved);
 
-                    switch getResourceID(ct)
+                    switch getResourceID(signature)
                     {
-                        case Some(id):
-                            exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resource }));
-                            for (familyID in getFamilyIDsWithResource(id))
-                            {
-                                added.add(familyID);
-                            }
-                        case None:
-                            Context.warning('Resource ${ ct.toString() } is not used in any families', resource.pos);
+                        case Some(id): insert(id, resource);
+                        case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
                     }
                 }
                 catch (_)
                 {
-                    Context.error('Unsupported resource expression ${ resource.toString() }', resource.pos);
+                    Context.error('Unable to get type of resource expression $resource', resource.pos);
                 }
         }
     }
@@ -377,39 +366,42 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
  */
 macro function removeResources(_universe : Expr, _resources : Array<Expr>)
 {
-    final exprs = [];
-    final adder = new Set();
+    final exprs  = [];
+    final adder  = new Set();
+    final insert = id -> {
+        adder.add(id);
+        for (familyID in getFamilyIDsWithResource(id))
+        {
+            exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+        }
+    };
 
     for (resource in _resources)
     {
         switch resource.expr
         {
             case EConst(CIdent(s)):
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    getResourceID)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.warning('Resource $ct is not used in any families', resource.pos);
-                    case UsableExpr(id):
-                        adder.add(id);
-                        for (familyID in getFamilyIDsWithResource(id))
+                    case Some(type):
+                        switch getResourceID(Utils.signature(type))
                         {
-                            exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+                            case Some(id): insert(id);
+                            case None: Context.warning('Resource $type is not used in any families', resource.pos);
                         }
-                    case NotFound:
-                        switch isComplexTypeConstructible(Context.getType(s).toComplexType(), getResourceID)
+                    case None:
+                        final resolved  = Context.getType(s);
+                        final signature = Utils.signature(resolved);
+
+                        switch getResourceID(signature)
                         {
-                            case Ok(result):
-                                adder.add(result.id);
-                                for (familyID in getFamilyIDsWithResource(result.id))
+                            case Some(id):
+                                switch resolved.toComplexType()
                                 {
-                                    exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+                                    case TPath(_): insert(id);
+                                    case other:
                                 }
-                            case Error(error):
-                                Context.warning(error, resource.pos);
+                            case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
                         }
                 }
             case _:
@@ -463,30 +455,21 @@ macro function setSystems(_universe : Expr, _systems : Array<Expr>)
             case EConst(CIdent(s)):
                 // Systems don't have unique IDs so we pass a function which will always return 0.
                 // This way we can still use the same resolution logic
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    cachePass)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.error('Unable to resolve system $ct', system.pos);
-                    case UsableExpr(_):
+                    case Some(_):
                         exprs.push(macro $e{ _universe }.systems.add($e{ system }));
-                    case NotFound:
-                        switch isComplexTypeConstructible(Context.getType(s).toComplexType(), cachePass)
+                    case None:
+                        switch Context.getType(s).toComplexType()
                         {
-                            case Ok(result):
-                                final tp = result.tp;
-                                exprs.push(macro $e{ _universe }.systems.add(new $tp($e{ _universe })));
-                            case Error(error):
-                                Context.warning(error, system.pos);
+                            case TPath(tp): exprs.push(macro $e{ _universe }.systems.add(new $tp($e{ _universe })));
+                            case other: Context.error('System $other should be TPath', system.pos);
                         }
                 }
             case ENew(tp, _):
                 exprs.push(macro $e{ _universe }.systems.add($e{ system }));
             case _:
-                Context.error('Unsupported resource expression ${ system.toString() }', system.pos);
+                Context.error('Unsupported system expression ${ system }', system.pos);
         }
     }
 
@@ -519,20 +502,14 @@ macro function removeSystems(_universe : Expr, _systems : Array<Expr>)
         switch system.expr
         {
             case EConst(CIdent(s)):
-                switch resolveIdentExpression(
-                    s,
-                    Context.getLocalType().getClass(),
-                    Context.getLocalTVars(),
-                    cachePass)
+                switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
-                    case NotCached(ct):
-                        Context.error('Unable to resolve system $ct', system.pos);
-                    case UsableExpr(id):
+                    case Some(_):
                         exprs.push(macro $e{ _universe }.systems.remove($e{ system }));
-                    case NotFound:
+                    case None:
                         Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
                 }
-            case _:
+            case _: Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
         }
     }
 
@@ -576,23 +553,25 @@ macro function setup(_families : Expr, _function : Expr)
             exprs;
         case other:
             Context.error('Unsupported iterate expression $other', _function.pos);
-    }
+    };
     
     // Insert variable declarations to the top of the extracted function block.
     // TODO : should probably check to make sure there are no type or name collisions.
     for (ident in familiesToSetup)
     {
-        final clsKey = '${ Context.getLocalType().toComplexType().toString() }-${ ident }';
+        final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ ident }';
         switch getFamilyByKey(clsKey)
         {
             case Some(family):
+
                 for (resource in family.resources)
                 {
                     if (resource.name != '_')
                     {
-                        final ct = Context.getType(resource.type).toComplexType();
+                        final signature = Utils.signature(resource.type);
+                        final ct        = resource.type.toComplexType();
 
-                        switch getResourceID(ct)
+                        switch getResourceID(signature)
                         {
                             case Some(id):
                                 final varName = resource.name;
@@ -652,16 +631,15 @@ macro function setup(_families : Expr, _function : Expr)
  * @param _family Family to iterate over.
  * @param _function Code to run for each entity in the family.
  */
-macro function iterate(_family : ExprOf<Family>, _function : Expr)
+macro function iterate(_family : Expr, _function : Expr)
 {
     // Get the name of the family to iterate over.
     final familyIdent = switch _family.expr
     {
-        case EConst(CIdent(s)):
-            s;
-        case other:
-            Context.error('Family passed into iterate must be an identifier', _family.pos);
+        case EConst(CIdent(s)): s;
+        case _: Context.error('Family passed into iterate must be an identifier', _family.pos);
     }
+
     // Extract the name of the entity variable in each iteration and the user typed expressions for the loop.
     final extracted = switch _function.expr
     {
@@ -681,7 +659,7 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
     }
 
     // Based on the family name and this systems name search all registered families for a match
-    final clsKey     = '${ Context.getLocalType().toComplexType().toString() }-${ familyIdent }';
+    final clsKey     = '${ Utils.signature(Context.getLocalType()) }-${ familyIdent }';
     final components = switch getFamilyByKey(clsKey)
     {
         case Some(family): family.components;
@@ -694,7 +672,7 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
     for (c in components)
     {
         final varName   = c.name;
-        final tableName = 'table${ c.type }';
+        final tableName = 'table${ c.hash }';
 
         // Defining a component in a family as '_' will skip the variable generation.
         if (varName != '_')
@@ -728,106 +706,27 @@ private function extractFunctionBlock(_expr : Expr) : Option<Array<Expr>>
 }
 
 /**
- * Given the value of a `EConst(CIdent(s))` expression check the static and non static fields of the provided class type and the
- * provided local variables for a matching name.
- * If a match is found the complex type of that field is fetched and passed into the cache function to see if it has an ID.
- * `UsableExpr` is returned with the ID from the cache function if lookup passes, else `NotCached` is returned with the complex type as a string.
- * If no match was found for `_target` then `NotFound` is returned.
- * @param _target Name of the class field to look for.
- * @param _classType Class type to search its static and non static fields.
- * @param _vars Local variables to search.
- * @param _cache Cache function to provide the complex type of a matching field to.
- * @return IdentResolveResult
+ * Given an identified string, class type, and local variables it will return the type of the identified if it exists in the class or local variables.
+ * @param _target Identifier string.
+ * @param _classType Class type to check local and static variables.
+ * @param _vars Map of local variables to check.
+ * @return Option<haxe.macro.Type>
  */
-private function resolveIdentExpression(
-    _target : String,
-    _classType : ClassType,
-    _vars : Map<String, TVar>,
-    _cache : ComplexType->Option<Int>) : IdentResolveResult
+private function isLocalIdent(_target : String, _classType : ClassType, _vars : Map<String, TVar>) : Option<haxe.macro.Type>
 {
     final found = _classType.findField(_target).or(_classType.findField(_target, true));
 
     if (found != null)
     {
-        final ct = found.type.toComplexType();
-
-        return switch _cache(ct)
-        {
-            case Some(id): UsableExpr(id);
-            case None: NotCached(ct.toString());
-        }
+        return Some(found.type);
     }
 
-    // Check if this identifier is a local var.
-    final found = _vars.get(_target);
-
-    if (found != null)
+    return if (_vars.exists(_target))
     {
-        final ct = found.t.toComplexType();
-
-        return switch _cache(ct)
-        {
-            case Some(id): UsableExpr(id);
-            case None: NotCached(ct.toString());
-        }
+        Some(_vars.get(_target).unsafe().t);
     }
-
-    return NotFound;
-}
-
-/**
- * Checks if the provided complex type is a `TPath` and that the cache function returns an ID when given the complex type.
- * @param _ct Complex type to check.
- * @param _cache Cache function to pass the complex type to if it's a `TPath`.
- * @return The `TypePath` of the complex type and the ID returned by the cache function, or an error message.
- */
-private function isComplexTypeConstructible(_ct : ComplexType, _cache : ComplexType->Option<Int>) : Result<{ id : Int, tp : TypePath }, String>
-{
-    return switch _ct
+    else
     {
-        case TPath(tp):
-            switch _cache(_ct)
-            {
-                case Some(id):
-                    Ok({ id : id, tp : tp });
-                case None:
-                    Error('Component ${ _ct.toString() } is not used in any families');
-            }
-        case other:
-            Error('Unsupported complex type ${ other.toString() }');
+        None;
     }
-}
-
-/**
- * Function used by the system macros to pass the cache test.
- * Systems don't have IDs so it can auto pass the cache check.
- * @param _ct ComplexType
- * @return Option<Int>
- */
-private function cachePass(_ct : ComplexType) : Option<Int>
-{
-    return Some(0);
-}
-
-/**
- * Result object when attempting to resolve an identifier against a classes fields.
- */
-private enum IdentResolveResult
-{
-    /**
-     * A matching field was found but its type was not found in the cache.
-     * @param ct ComplexType which has not been required by any family.
-     */
-    NotCached(ct : String);
-
-    /**
-     * A component has been found and the expression is usable as is.
-     * @param id Unique ID of the component which has been resolved from the EConst(CIdent(_)) expression.
-     */
-    UsableExpr(id : Int);
-
-    /**
-     * A field with the provided name was not found in the class.
-     */
-    NotFound;
 }

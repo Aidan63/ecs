@@ -17,6 +17,6 @@ function main()
 
     for (_ in 0...120)
     {
-        universe.systems.update(1 / 60);
+        universe.update(1 / 60);
     }
 }

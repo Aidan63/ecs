@@ -570,13 +570,11 @@ macro function setup(_families : Expr, _function : Expr)
                     {
                         final signature = Utils.signature(resource.type);
                         final ct        = resource.type.toComplexType();
+                        final varName   = resource.name;
 
                         switch getResourceID(signature)
                         {
                             case Some(id):
-                                final varName = resource.name;
-                                final resType = resource.type;
-
                                 extracted.insert(0, macro final $varName = (universe.resources.get($v{ id }) : $ct));
                             case None:
                                 Context.error('Resource ${ resource.type } has not been requested by any families', _families.pos);
@@ -686,6 +684,30 @@ macro function iterate(_family : Expr, _function : Expr)
     }
 
     return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
+}
+
+/**
+ * Returns the table variable for a specific component type.
+ * This should not be used outside of a system.
+ * If the provided type is not used as a component in any of the systems families the behaviour is undefined.
+ * 
+ * ```
+ * final component = table(SomeComponent).get(entity);
+ * ```
+ * @param _type Type to get the table for.
+ */
+macro function table(_type : Expr)
+{
+    return switch _type.expr
+    {
+        case EConst(CIdent(s)):
+            final resolved  = Context.getType(s);
+            final signature = Utils.signature(resolved);
+
+            { expr : EConst(CIdent('table$signature')), pos : Context.currentPos() };
+        case _:
+            Context.error('Argument must be a type identifier', Context.currentPos());
+    }
 }
 
 /**

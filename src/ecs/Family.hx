@@ -57,6 +57,11 @@ class Family
         }
     }
 
+    public function has(_entity)
+    {
+        return entities.has(_entity);
+    }
+
     public function activate()
     {
         if (!active)

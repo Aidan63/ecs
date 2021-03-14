@@ -1,0 +1,2 @@
+-D ecs.no_dyn_load
+test-js.hxml

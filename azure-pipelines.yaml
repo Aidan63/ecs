@@ -1,64 +1,107 @@
 jobs:
 - job: unit_tests
+  variables:
+    - name: cpp
+      value: |
+        # This is needed to manually build dev versions of hxcpp
+        cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
+        npm install lix
+        cd tools/hxcpp
+        npx haxe compile.hxml
+
+        cd $(Build.SourcesDirectory)
+        npx haxe $(hxml)
+        ./tests/bin/cpp/Main-debug
+    - name: cppia
+      value: |
+        # This is needed to manually build dev versions of hxcpp
+        cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
+        npm install lix
+        cd tools/hxcpp
+        npx haxe compile.hxml
+
+        cd $(Build.SourcesDirectory)
+        mkdir -p tests/bin/cppia
+        npx haxe host.hxml
+        npx haxe $(hxml)
+
+        ./tests/bin/host/Host
+    - name: hashlink
+      value: |
+        # Manually build hashlink
+        sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
+        git clone https://github.com/HaxeFoundation/hashlink
+        cd hashlink
+        git checkout 1.11
+        make
+        sudo make install
+
+        # usr/local/lib isn't searched for shared objects by default.
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+        cd $(Build.SourcesDirectory)
+        npx haxe $(hxml)
+        hl tests/bin/hl/out.hl
+    - name: js
+      value: |
+        npx haxe $(hxml)
+        node tests/bin/js/out.js
+    - name: jvm
+      value: |
+        npx haxe $(hxml)
+        java -jar tests/bin/jvm/out.jar
+    - name: interp
+      value: npx haxe $(hxml)
   strategy:
     matrix:
       'cpp':
         name: cpp
-        cmd: |
-          # This is needed to manually build dev versions of hxcpp
-          cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
-          npm install lix
-          cd tools/hxcpp
-          npx haxe compile.hxml
-
-          cd $(Build.SourcesDirectory)
-          npx haxe test-cpp.hxml
-          ./tests/bin/cpp/Main-debug
+        hxml: test-cpp.hxml
+        cmd: $(cpp)
+      'cpp-no-dyn':
+        name: cpp no dyn
+        hxml: test-cpp-no-dyn.hxml
+        cmd: $(cpp)
       'cppia':
         name: cppia
-        cmd: |
-          # This is needed to manually build dev versions of hxcpp
-          cd $(npx haxelib path hxcpp | head -1 | tr -d '\n')
-          npm install lix
-          cd tools/hxcpp
-          npx haxe compile.hxml
-
-          cd $(Build.SourcesDirectory)
-          mkdir -p tests/bin/cppia
-          npx haxe host.hxml
-          npx haxe test-cppia.hxml
-
-          ./tests/bin/host/Host
+        hxml: test-cppia.hxml
+        cmd: $(cppia)
+      'cppia-no-dyn':
+        name: cppia no dyn
+        hxml: test-cppia-no-dyn.hxml
+        cmd: $(cppia)
       'hl':
         name: hashlink
-        cmd: |
-          # Manually build hashlink
-          sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl2-dev libmbedtls-dev libuv1-dev
-          git clone https://github.com/HaxeFoundation/hashlink
-          cd hashlink
-          git checkout 1.11
-          make
-          sudo make install
-
-          # usr/local/lib isn't searched for shared objects by default.
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-
-          cd $(Build.SourcesDirectory)
-          npx haxe test-hl.hxml
-          hl tests/bin/hl/out.hl
+        hxml: test-hl.hxml
+        cmd: $(hashlink)
+      'hl-no-dyn':
+        name: hashlink no dyn
+        hxml: test-hl-no-dyn.hxml
+        cmd: $(hashlink)
       'js':
         name: js
-        cmd: |
-          npx haxe test-js.hxml
-          node tests/bin/js/out.js
+        hxml: test-js.hxml
+        cmd: $(js)
+      'js-no-dyn':
+        name: js no dyn
+        hxml: test-js-no-dyn.hxml
+        cmd: $(js)
       'jvm':
         name: jvm
-        cmd: |
-          npx haxe test-jvm.hxml
-          java -jar tests/bin/jvm/out.jar
+        hxml: test-jvm.hxml
+        cmd: $(jvm)
+      'jvm-no-dyn':
+        name: jvm no dyn
+        hxml: test-jvm-no-dyn.hxml
+        cmd: $(jvm)
       'interp':
         name: interp
-        cmd: npx haxe test-interp.hxml
+        hxml: test-interp.hxml
+        cmd: $(interp)
+      'interp-no-dyn':
+        name: interp no dyn
+        hxml: test-interp-no-dyn.hxml
+        cmd: $(interp)
   pool:
     vmImage: 'ubuntu-latest'
   steps:

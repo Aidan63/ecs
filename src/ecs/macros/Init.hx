@@ -68,8 +68,11 @@ macro function inject()
                 familyIDs.push({ expr: obj, pos: familyManager.pos });
             }
 
-            // final familyIDs = [ for (f in families) { components : [ for (c in f.components) c.uID ], resources : [ for (r in f.resources) r.uID ] } ];
             familyManager.meta.add('families', familyIDs, familyManager.pos);
+
+            // Find the `ecs.core.ResourceManager` class and add meta data about the maximum number of resources.
+            final resourceManager = Context.getType('ecs.core.ResourceManager').getClass();
+            resourceManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], familyManager.pos);
         });
     }
 

@@ -47,59 +47,31 @@ macro function printFullReport()
 
 macro function inject()
 {
-    Context.onAfterTyping(types -> {
-        final componentClass = macro class InjectedComponentManager {
-            final entities   : ecs.core.EntityManager;
-            final components : haxe.ds.Vector<Any>;
-            final flags      : haxe.ds.Vector<bits.Bits>;
+    if (!Context.defined('ecs.no_dyn_load'))
+    {
+        Context.onAfterTyping(_ -> {
+            // Find the `ecs.core.FamilyManager` class and add meta data about all of the families.
+            // These will then be read at start up and added to the family manager.
+            final familyManager = Context.getType('ecs.core.FamilyManager').getClass();
+            familyManager.meta.add('componentCount', [ macro $v{ getComponentCount() } ], familyManager.pos);
+            familyManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], familyManager.pos);
 
-            public function new(_entities) {
-                entities   = _entities;
-                components = new haxe.ds.Vector($v{ getComponentCount() });
-                flags      = new haxe.ds.Vector(entities.capacity());
+            final families  = getFamilies();
+            final familyIDs = new Array<Expr>();
 
-                $b{ [
-                    for (key => value in getComponentMap()) {
-                        final ct = value.type.toComplexType();
-
-                        macro components.set($v{ value.id }, new ecs.Components<$ct>(entities.capacity()));
-                    }
-                ] }
-
-                for (i in 0...flags.length) {
-                    flags[i] = new bits.Bits();
-                }
-            }
-
-            public function getTable(_compID : Int)
+            for (family in families)
             {
-                return components[_compID];
+                final cmpIDs = [ for (c in family.components) macro $v{ c.uID } ];
+                final resIDs = [ for (r in family.resources) macro $v{ r.uID } ];
+                final obj    = EObjectDecl([ { field: 'components', expr: macro $a{ cmpIDs } }, { field: 'resources', expr: macro $a{ resIDs } } ]);
+
+                familyIDs.push({ expr: obj, pos: familyManager.pos });
             }
 
-            @:generic public function set<T>(_entity : ecs.Entity, _id : Int, _component : T)
-            {
-                (components[_id] : ecs.Components<T>).set(_entity, _component);
-
-                flags[_entity.id()].set(_id);
-            }
-
-            public function remove(_entity : ecs.Entity, _id : Int)
-            {
-                flags[_entity.id()].unset(_id);
-            }
-
-            public function clear(_entity : ecs.Entity)
-            {
-                flags[_entity.id()].clear();
-            }
-        }
-
-        trace(new haxe.macro.Printer().printTypeDefinition(componentClass));
-
-        componentClass.pack = [ 'ecs', 'core' ];
-
-        Context.defineModule('ecs.core', [ componentClass ]);
-    });
+            // final familyIDs = [ for (f in families) { components : [ for (c in f.components) c.uID ], resources : [ for (r in f.resources) r.uID ] } ];
+            familyManager.meta.add('families', familyIDs, familyManager.pos);
+        });
+    }
 
     return macro null;
 }

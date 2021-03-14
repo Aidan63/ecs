@@ -102,7 +102,7 @@ jobs:
       inputs:
         command: 'ci'
     - script: |
-        sed -i '1s/^/$(hxml)/' run.hxml
+        sed -i '1s/^/$(hxml)/\r\n' run.hxml
         cat run.hxml
       displayName: Patch Hxml File
       workingDirectory: $(Build.SourcesDirectory)/sample

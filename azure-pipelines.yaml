@@ -1,7 +1,6 @@
 jobs:
 - job: unit_tests
   strategy:
-    maxParallel: 6
     matrix:
       'cpp':
         name: cpp
@@ -86,7 +85,6 @@ jobs:
 
 - job: run_sample
   strategy:
-    maxParallel: 2
     matrix:
       dynLoad:
         hxml:

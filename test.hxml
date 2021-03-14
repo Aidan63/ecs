@@ -11,4 +11,5 @@
 -m Main
 --dce full
 --debug
+--macro ecs.macros.Init.inject()
 --macro instrument.Instrumentation.coverage([ 'ecs' ], [ 'src' ])

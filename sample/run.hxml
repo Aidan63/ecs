@@ -2,7 +2,4 @@
 -cp ../src
 -L bits
 -L safety
--m Main
---cpp bin/cpp
---macro ecs.macros.Init.inject()
-#--run Main
+--run Main

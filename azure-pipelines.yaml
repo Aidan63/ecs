@@ -87,9 +87,9 @@ jobs:
   strategy:
     matrix:
       dynLoad:
-        hxml:
+        hxml: run.hxml
       noDynLoad:
-        hxml: -D ecs.no_dyn_load
+        hxml: run-no-dyn.hxml
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -101,13 +101,7 @@ jobs:
       displayName: Restore
       inputs:
         command: 'ci'
-    - script: |
-        sed -i '1s/^/$(hxml)/\r\n' run.hxml
-        cat run.hxml
-      displayName: Patch Hxml File
-      workingDirectory: $(Build.SourcesDirectory)/sample
-      failOnStderr: true
-    - script: npx haxe run.hxml
+    - script: npx haxe $(hxml)
       displayName: Run
       workingDirectory: $(Build.SourcesDirectory)/sample
       failOnStderr: true

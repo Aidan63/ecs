@@ -1,6 +1,7 @@
 jobs:
 - job: unit_tests
   strategy:
+    maxParallel: 6
     matrix:
       'cpp':
         name: cpp
@@ -102,7 +103,9 @@ jobs:
       displayName: Restore
       inputs:
         command: 'ci'
-    - script: sed -i '1s/^/$(hxml) /' run.hxml
+    - script: |
+        sed -i '1s/^/'"$hxml"'/' run.hxml
+        cat run.hxml
       displayName: Patch Hxml File
       workingDirectory: $(Build.SourcesDirectory)/sample
       failOnStderr: true

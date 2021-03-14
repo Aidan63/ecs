@@ -22,7 +22,7 @@ macro function setupComponents(_size : Expr)
 {
     final creation = [];
 
-    for (key => value in getComponentMap())
+    for (_ => value in getComponentMap())
     {
         final ct = value.type.toComplexType();
 

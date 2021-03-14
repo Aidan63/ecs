@@ -1,8 +1,6 @@
 package ecs.core;
 
 import haxe.ds.Vector;
-import ecs.ds.Signal;
-import ecs.macros.ComponentMacros;
 import bits.Bits;
 
 class ComponentManager
@@ -23,11 +21,25 @@ class ComponentManager
 
     public function new(_entities)
     {
-        entities   = _entities;
-        flags      = new Vector(_entities.capacity());
-        components = createComponentVector();
+        entities = _entities;
+        flags    = new Vector(_entities.capacity());
 
-        setupComponents(_entities.capacity());
+#if ecs.no_dyn_load
+        components = ecs.macros.ComponentMacros.createComponentVector();
+
+        ecs.macros.ComponentMacros.setupComponents(_entities.capacity());
+#else
+        final meta           = haxe.rtti.Meta.getType(ComponentManager);
+        final componentCount = meta.componentCount[0];
+        final componentIDs   = meta.components;
+
+        components = new Vector(componentCount);
+
+        for (id in componentIDs)
+        {
+            components.set(id, new ecs.Components<Any>(_entities.capacity()));
+        }
+#end
 
         for (i in 0...flags.length)
         {
@@ -44,12 +56,21 @@ class ComponentManager
         return components[_compID];
     }
 
+#if ecs.no_dyn_load
     @:generic public function set<T>(_entity : Entity, _id : Int, _component : T)
     {
         (components[_id] : Components<T>).set(_entity, _component);
 
         flags[_entity.id()].set(_id);
     }
+#else
+    public function set(_entity : Entity, _id : Int, _component : Any)
+    {
+        (components[_id] : Components<Any>).set(_entity, _component);
+
+        flags[_entity.id()].set(_id);
+    }
+#end
 
     public function remove(_entity : Entity, _id : Int)
     {

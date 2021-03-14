@@ -72,7 +72,13 @@ macro function inject()
 
             // Find the `ecs.core.ResourceManager` class and add meta data about the maximum number of resources.
             final resourceManager = Context.getType('ecs.core.ResourceManager').getClass();
-            resourceManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], familyManager.pos);
+            resourceManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], resourceManager.pos);
+
+            // Find the `ecs.core.ComponentManager` class and add meta data about the maximum number of components.
+            // The ID of all components is also added.
+            final componentManager = Context.getType('ecs.core.ComponentManager').getClass();
+            componentManager.meta.add('componentCount', [ macro $v{ getComponentCount() } ], componentManager.pos);
+            componentManager.meta.add('components', [ for (c in getComponentMap()) macro $v{ c.id } ], componentManager.pos);
         });
     }
 

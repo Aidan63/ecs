@@ -671,11 +671,12 @@ macro function iterate(_family : Expr, _function : Expr)
     {
         final varName   = c.name;
         final tableName = 'table${ c.hash }';
+        final ct        = c.type.toComplexType();
 
         // Defining a component in a family as '_' will skip the variable generation.
         if (varName != '_')
         {
-            forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+            forExpr.push(macro final $varName = ($i{ tableName }.get($i{ extracted.name }) : $ct));
         }
     }
     for (e in extracted.expr)

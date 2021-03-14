@@ -102,7 +102,7 @@ jobs:
       displayName: Restore
       inputs:
         command: 'ci'
-    - script: echo $(hxml) >> run.hxml
+    - script: sed -i '1s/^/$(hxml) /' run.hxml
       displayName: Patch Hxml File
       workingDirectory: $(Build.SourcesDirectory)/sample
       failOnStderr: true

@@ -84,6 +84,13 @@ jobs:
       displayName: Coverage
 
 - job: run_sample
+  strategy:
+    maxParallel: 2
+    matrix:
+      dynLoad:
+        hxml:
+      noDynLoad:
+        hxml: -D ecs.no_dyn_load
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -95,6 +102,10 @@ jobs:
       displayName: Restore
       inputs:
         command: 'ci'
+    - script: $(hxml) >> run.hxml
+      displayName: Patch Hxml File
+      workingDirectory: $(Build.SourcesDirectory)/sample
+      failOnStderr: true
     - script: npx haxe run.hxml
       displayName: Run
       workingDirectory: $(Build.SourcesDirectory)/sample

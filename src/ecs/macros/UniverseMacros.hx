@@ -341,9 +341,18 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
     }
 
     // Add a call to try and activate each families which requested the resources.
-    for (familyID in added)
+    // If we are not dynamically loading we can reduced the number of families we try and activate
+    // When dynamically loading we have no choice by to try and load each family.
+    if (Context.defined('ecs.no_dyn_load'))
     {
-        exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
+        for (familyID in added)
+        {
+            exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
+        }
+    }
+    else
+    {
+        exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryActivate(i));
     }
 
     return macro $b{ exprs };
@@ -410,9 +419,16 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
     }
 
     // Remove the resources once each family has been deactivated
-    for (resourceID in adder)
+    if (Context.defined('ecs.no_dyn_load'))
     {
-        exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
+        for (resourceID in adder)
+        {
+            exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
+        }
+    }
+    else
+    {
+        exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i));
     }
 
     return macro $b{ exprs };

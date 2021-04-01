@@ -1,2 +1,2 @@
--D ecs.no_dyn_load
+-D ecs.static_loading
 test-jvm.hxml

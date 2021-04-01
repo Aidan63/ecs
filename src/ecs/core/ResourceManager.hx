@@ -17,7 +17,7 @@ class ResourceManager
 
     public function new()
     {
-#if ecs.no_dyn_load
+#if ecs.static_loading
         flags     = ecs.macros.ResourceMacros.createResourceBits();
         resources = ecs.macros.ResourceMacros.createResourceVector();
 #else

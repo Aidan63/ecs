@@ -47,7 +47,7 @@ macro function printFullReport()
 
 macro function inject()
 {
-    if (!Context.defined('ecs.no_dyn_load'))
+    if (!Context.defined('ecs.static_loading'))
     {
         Context.onAfterTyping(_ -> {
             // Find the `ecs.core.FamilyManager` class and add meta data about all of the families.

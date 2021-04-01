@@ -24,7 +24,7 @@ class ComponentManager
         entities = _entities;
         flags    = new Vector(_entities.capacity());
 
-#if ecs.no_dyn_load
+#if ecs.static_loading
         components = ecs.macros.ComponentMacros.createComponentVector();
 
         ecs.macros.ComponentMacros.setupComponents(_entities.capacity());
@@ -32,7 +32,7 @@ class ComponentManager
         final meta           = haxe.rtti.Meta.getType(ComponentManager);
         final componentCount = meta.componentCount[0];
         final componentIDs   = meta.components;
-
+        
         components = new Vector(componentCount);
 
         for (id in componentIDs)
@@ -56,7 +56,7 @@ class ComponentManager
         return components[_compID];
     }
 
-#if ecs.no_dyn_load
+#if ecs.static_loading
     @:generic public function set<T>(_entity : Entity, _id : Int, _component : T)
     {
         (components[_id] : Components<T>).set(_entity, _component);

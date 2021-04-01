@@ -6,6 +6,8 @@ import ecs.core.ComponentManager;
 
 class FamilyManager
 {
+    public final number : Int;
+
     final components : ComponentManager;
 
     final resources : ResourceManager;
@@ -14,10 +16,7 @@ class FamilyManager
 
     public function new(_components, _resources, _size)
     {
-        components = _components;
-        resources  = _resources;
-
-#if ecs.no_dyn_load
+#if ecs.static_loading
         families = ecs.macros.FamilyMacros.createFamilyVector();
         ecs.macros.FamilyMacros.setupFamilies(_size);
 #else
@@ -44,6 +43,10 @@ class FamilyManager
             families.set(idx, new Family(idx, cmpBits, resBits, _size));
         }
 #end
+
+        components = _components;
+        resources  = _resources;
+        number     = families.length;
     }
 
     public function get(_index : Int)
@@ -56,6 +59,14 @@ class FamilyManager
         if (!families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
         {
             families[_id].activate();
+        }
+    }
+
+    public function tryDeactivate(_id : Int)
+    {
+        if (families[_id].isActive() && !resources.flags.areSet(families[_id].resourcesMask))
+        {
+            families[_id].deactivate();
         }
     }
 

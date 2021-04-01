@@ -2,7 +2,7 @@ package ecs;
 
 import haxe.ds.Vector;
 
-#if ecs.no_dyn_load @:generic #end class Components<T>
+#if ecs.static_loading @:generic #end class Components<T>
 {
     final components : Vector<T>;
 

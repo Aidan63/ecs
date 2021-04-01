@@ -2,6 +2,6 @@
 -cp ../src
 -L bits
 -L safety
--D ecs.no_dyn_load
+-D ecs.static_loading
 --macro ecs.macros.Init.inject()
 --run Main

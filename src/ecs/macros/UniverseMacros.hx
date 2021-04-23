@@ -683,7 +683,7 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
         forExpr.push(e);
     }
 
-    return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
+    return macro @:pos(Context.currentPos()) for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
 }
 
 /**

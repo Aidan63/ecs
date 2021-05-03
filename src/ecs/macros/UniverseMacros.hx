@@ -166,7 +166,11 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
                         }
                         else
                         {
-                            insert(registerComponent(signature, resolved), component);
+                            switch resolved.toComplexType()
+                            {
+                                case TPath(tp): insert(registerComponent(signature, resolved), macro new $tp());
+                                case other: Context.error('Component $other should be TPath', component.pos);
+                            }
                         }
                 }
             case _:

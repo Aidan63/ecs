@@ -11,19 +11,6 @@ Inspired / ideas stolen from [clay_ecs](https://github.com/RudenkoArts/clay_ecs/
 
 Requires Haxe 4.2 nightlies as well as the safety and bits library.
 
-- [Quick Example](#--quick-example--)
-- [Advance Usage](#--advance-usage--)
-  + [Iterate](#--iterate--)
-  + [Resources](#--resources--)
-  + [Family Definition](#--family-definition--)
-    - [FastFamily](#--fastfamily--)
-    - [FullFamily](#--fullfamily--)
-  + [Family Activation](#--family-activation--)
-  + [OnAdded and OnRemoved](#--onadded-and-onremoved--)
-  + [OnEntityAdded and OnEntityRemoved](#--onentityadded-and-onentityremoved--)
-- [Implementation Details](#--implementation-details--)
-- [Future Additions and Improvements](#future-additions-and-improvements)
-
 ## **Quick Example**
 
 Components and resources can be plain old haxe classes as well as ints, floats, bools, and strings. No interface needs to be implemented or class extended.
@@ -346,6 +333,12 @@ class MySystem extends System
 All components and resources requested by a family are guarenteed to still be accessible from within `onEntityAdded` and `onEntityRemoved` subscribers.
 
 :information_source: If a family has 10 entities in it and a resource it requires is removed from the universe all subscribers to that families `onEntityRemoved` signal will recieve 10 notifications, one for each entity being removed. In the same fashion when a resource is added any subscribers to a family which now has entities will recieve a notification for each entity added.
+
+### Static Loading
+
+By default run time type information is used to store data about all possible components, families, resources, etc. This is then read at universe creation and used to pre-allocate arrays of the correct size. With the `ecs.static_loading` define you can opt out of this loading technique and use one which is entirely macro based. This has some caveats though, static loading is dependant on the compilers parsing order which means if all possible systems haven't yet been parsed by the time the universe constructor is parsed those systems will never been known about and will cause run time crashes.
+
+To use static loading ensure all of your systems are explicitly imported into the class (no wildcard imports or import.hx files) which is constructing the universe.
 
 ## **Implementation Details**
 

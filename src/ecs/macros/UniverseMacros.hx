@@ -1,5 +1,7 @@
 package ecs.macros;
 
+import ecs.macros.ComponentCache.registerComponent;
+import ecs.macros.ResourceCache.registerResource;
 import ecs.ds.Set;
 import ecs.ds.Result;
 import haxe.ds.Option;
@@ -110,13 +112,18 @@ macro function destroyEntity(_universe : ExprOf<Universe>, _entity : ExprOf<Enti
  */
 macro function setComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
-    final added  = new Set();
-    final insert = (id, compExpr) -> {
+    final staticLoading = Context.defined('ecs.static_loading');
+    final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added         = new Set();
+    final insert        = (id, compExpr) -> {
         exprs.push(macro $e{ _universe }.components.set(_ecsTmpEntity, $v{ id }, $e{ compExpr }));
-        for (familyID in getFamilyIDsWithComponent(id))
+
+        if (staticLoading)
         {
-            added.add(familyID);
+            for (familyID in getFamilyIDsWithComponent(id))
+            {
+                added.add(familyID);
+            }
         }
     }
 
@@ -128,24 +135,42 @@ macro function setComponents(_universe : ExprOf<Universe>, _entity : Expr, _comp
                 switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
                     case Some(type):
-                        switch getComponentID(Utils.signature(type))
+                        if (staticLoading)
                         {
-                            case Some(id): insert(id, component);
-                            case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
+                            switch getComponentID(Utils.signature(type))
+                            {
+                                case Some(id): insert(id, component);
+                                case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
+                            }
+                        }
+                        else
+                        {
+                            insert(registerComponent(Utils.signature(type), type), component);
                         }
                     case None:
                         final resolved  = Context.getType(s);
                         final signature = Utils.signature(resolved);
 
-                        switch getComponentID(signature)
+                        if (staticLoading)
                         {
-                            case Some(id):
-                                switch resolved.toComplexType()
-                                {
-                                    case TPath(tp): insert(id, macro new $tp());
-                                    case other: Context.error('Component $other should be TPath', component.pos);
-                                }
-                            case None: Context.warning('Component $resolved is not used in any families', component.pos);
+                            switch getComponentID(signature)
+                            {
+                                case Some(id):
+                                    switch resolved.toComplexType()
+                                    {
+                                        case TPath(tp): insert(id, macro new $tp());
+                                        case other: Context.error('Component $other should be TPath', component.pos);
+                                    }
+                                case None: Context.warning('Component $resolved is not used in any families', component.pos);
+                            }
+                        }
+                        else
+                        {
+                            switch resolved.toComplexType()
+                            {
+                                case TPath(tp): insert(registerComponent(signature, resolved), macro new $tp());
+                                case other: Context.error('Component $other should be TPath', component.pos);
+                            }
                         }
                 }
             case _:
@@ -169,11 +194,27 @@ macro function setComponents(_universe : ExprOf<Universe>, _entity : Expr, _comp
 
     // After all `set` functions are called check each family which could have been modified by the components added.
     exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
-    for (familyID in added)
+    if (staticLoading)
     {
-        exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
-        exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-            ecsTmpFamily.add(_ecsTmpEntity);
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
+        {
+            exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+            exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.add(_ecsTmpEntity);
+            });
+        }
+    }
+    else
+    {
+        // With dynamic loaded we have no choice but to check all families.
+        exprs.push(macro for (i in 0...$e{ _universe }.families.number) {
+            final ecsTmpFamily = $e{ _universe }.families.get(i);
+            if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
+            {
+                ecsTmpFamily.add(_ecsTmpEntity);
+            }
         });
     }
 
@@ -198,13 +239,18 @@ macro function setComponents(_universe : ExprOf<Universe>, _entity : Expr, _comp
  */
 macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
 {
-    final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
-    final added  = new Set();
-    final insert = id -> {
+    final staticLoading = Context.defined('ecs.static_loading');
+    final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
+    final added         = new Set();
+    final insert        = id -> {
         exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
-        for (familyID in getFamilyIDsWithComponent(id))
+
+        if (staticLoading)
         {
-            added.add(familyID);
+            for (familyID in getFamilyIDsWithComponent(id))
+            {
+                added.add(familyID);
+            }
         }
     };
 
@@ -237,11 +283,27 @@ macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _c
 
     // After all `remove` functions are called check each family which could have been modified by the components removed.
     exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
-    for (familyID in added)
+    if (staticLoading)
     {
-        exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
-        exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-            ecsTmpFamily.remove(_ecsTmpEntity);
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
+        {
+            exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+            exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.remove(_ecsTmpEntity);
+            });
+        }
+    }
+    else
+    {
+        // With dynamic loaded we have no choice but to check all families.
+        exprs.push(macro for (i in 0...$e{ _universe }.families.number) {
+            final ecsTmpFamily = $e{ _universe }.families.get(i);
+            if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
+            {
+                ecsTmpFamily.add(_ecsTmpEntity);
+            }
         });
     }
 
@@ -283,13 +345,18 @@ macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _c
  */
 macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
 {
-    final exprs  = [];
-    final added  = new Set();
-    final insert = (id, resExpr) -> {
+    final staticLoading = Context.defined('ecs.static_loading');
+    final exprs         = [];
+    final added         = new Set();
+    final insert        = (id, resExpr) -> {
         exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resExpr }));
-        for (familyID in getFamilyIDsWithResource(id))
+
+        if (staticLoading)
         {
-            added.add(familyID);
+            for (familyID in getFamilyIDsWithResource(id))
+            {
+                added.add(familyID);
+            }   
         }
     };
 
@@ -301,24 +368,16 @@ macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Exp
                 switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                 {
                     case Some(type):
-                        switch getResourceID(Utils.signature(type))
-                        {
-                            case Some(id): insert(id, resource);
-                            case None: Context.warning('Local ident $s : $type is not used in any families', resource.pos);
-                        }
+                        insert(registerResource(Utils.signature(type)), resource);
                     case None:
                         final resolved  = Context.getType(s);
                         final signature = Utils.signature(resolved);
+                        final id        = registerResource(signature);
 
-                        switch getResourceID(signature)
+                        switch resolved.toComplexType()
                         {
-                            case Some(id):
-                                switch resolved.toComplexType()
-                                {
-                                    case TPath(tp): insert(id, macro new $tp());
-                                    case other: Context.error('Resource $other should be TPath', resource.pos);
-                                }
-                            case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
+                            case TPath(tp): insert(id, macro new $tp());
+                            case other: Context.error('Resource $other should be TPath', resource.pos);
                         }
                 }
             case _:
@@ -326,12 +385,9 @@ macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Exp
                 {
                     final resolved  = Context.typeof(resource);
                     final signature = Utils.signature(resolved);
+                    final id        = registerResource(signature);
 
-                    switch getResourceID(signature)
-                    {
-                        case Some(id): insert(id, resource);
-                        case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
-                    }
+                    insert(id, resource);
                 }
                 catch (_)
                 {
@@ -341,9 +397,18 @@ macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Exp
     }
 
     // Add a call to try and activate each families which requested the resources.
-    for (familyID in added)
+    // If we are not dynamically loading we can reduced the number of families we try and activate
+    // When dynamically loading we have no choice by to try and load each family.
+    if (staticLoading)
     {
-        exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
+        for (familyID in added)
+        {
+            exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
+        }
+    }
+    else
+    {
+        exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryActivate(i));
     }
 
     return macro $b{ exprs };
@@ -366,13 +431,18 @@ macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Exp
  */
 macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
 {
-    final exprs  = [];
-    final adder  = new Set();
-    final insert = id -> {
+    final staticLoading = Context.defined('ecs.static_loading');
+    final exprs         = [];
+    final adder         = new Set();
+    final insert        = id -> {
         adder.add(id);
-        for (familyID in getFamilyIDsWithResource(id))
+
+        if (staticLoading)
         {
-            exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+            for (familyID in getFamilyIDsWithResource(id))
+            {
+                exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
+            }
         }
     };
 
@@ -412,6 +482,11 @@ macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<
     // Remove the resources once each family has been deactivated
     for (resourceID in adder)
     {
+        if (!staticLoading)
+        {
+            exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i, $v{ resourceID }));
+        }
+
         exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
     }
 
@@ -671,11 +746,12 @@ macro function iterate(_family : ExprOf<Family>, _function : Expr)
     {
         final varName   = c.name;
         final tableName = 'table${ c.hash }';
+        final ct        = c.type.toComplexType();
 
         // Defining a component in a family as '_' will skip the variable generation.
         if (varName != '_')
         {
-            forExpr.push(macro final $varName = $i{ tableName }.get($i{ extracted.name }));
+            forExpr.push(macro final $varName = ($i{ tableName }.get($i{ extracted.name }) : $ct));
         }
     }
     for (e in extracted.expr)

@@ -2,10 +2,8 @@ package ecs;
 
 import haxe.ds.Vector;
 
-@:generic class Components<T>
+#if ecs.static_loading @:generic #end class Components<T>
 {
-    // final manager : ComponentManager;
-    // final id : Int;
     final components : Vector<T>;
 
     public function new(_size)

@@ -2,9 +2,6 @@ package ecs.core;
 
 import haxe.ds.Vector;
 import bits.Bits;
-import ecs.ds.Unit;
-import ecs.ds.Signal;
-import ecs.macros.ResourceMacros;
 
 class ResourceManager
 {
@@ -20,8 +17,14 @@ class ResourceManager
 
     public function new()
     {
-        flags     = createResourceBits();
-        resources = createResourceVector();
+#if ecs.static_loading
+        flags     = ecs.macros.ResourceMacros.createResourceBits();
+        resources = ecs.macros.ResourceMacros.createResourceVector();
+#else
+        final resourceCount = haxe.rtti.Meta.getType(ResourceManager).resourceCount[0];
+        flags     = new Bits(resourceCount);
+        resources = new Vector(resourceCount);
+#end
     }
 
     /**

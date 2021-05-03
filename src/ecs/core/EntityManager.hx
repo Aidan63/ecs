@@ -1,6 +1,5 @@
 package ecs.core;
 
-import ecs.ds.Signal;
 import haxe.ds.Vector;
 
 class EntityManager

@@ -43,7 +43,7 @@ using haxe.macro.Tools;
  * @return Created entity ID.
  * @throws UniverseFullException Thrown if there is not enough space in the universe for another entity.
  */
-macro function createEntity(_universe : Expr) : ExprOf<Entity>
+macro function createEntity(_universe : ExprOf<Universe>) : ExprOf<Entity>
 {
     return macro $e{ _universe }.entities.create();
 }
@@ -64,7 +64,7 @@ macro function createEntity(_universe : Expr) : ExprOf<Entity>
  * @param _universe Universe to remove the entity from.
  * @param _entity Entity ID.
  */
-macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
+macro function destroyEntity(_universe : ExprOf<Universe>, _entity : ExprOf<Entity>)
 {
     return macro {
         final _ecsTmpEntity = $e{ _entity };
@@ -110,7 +110,7 @@ macro function destroyEntity(_universe : Expr, _entity : ExprOf<Entity>)
  * @param _entity Entity to add components to.
  * @param _components Components to add.
  */
-macro function setComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
+macro function setComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
 {
     final staticLoading = Context.defined('ecs.static_loading');
     final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
@@ -237,7 +237,7 @@ macro function setComponents(_universe : Expr, _entity : Expr, _components : Arr
  * @param _entity Entity to remove components from.
  * @param _components Components to remove.
  */
-macro function removeComponents(_universe : Expr, _entity : Expr, _components : Array<Expr>)
+macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
 {
     final staticLoading = Context.defined('ecs.static_loading');
     final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
@@ -343,7 +343,7 @@ macro function removeComponents(_universe : Expr, _entity : Expr, _components : 
  * @param _universe Universe to add resources to.
  * @param _resources Resources to add.
  */
-macro function setResources(_universe : Expr, _resources : Array<Expr>)
+macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
 {
     final staticLoading = Context.defined('ecs.static_loading');
     final exprs         = [];
@@ -429,7 +429,7 @@ macro function setResources(_universe : Expr, _resources : Array<Expr>)
  * @param _universe Universe to remove the resource from.
  * @param _components Resources to remove.
  */
-macro function removeResources(_universe : Expr, _resources : Array<Expr>)
+macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
 {
     final staticLoading = Context.defined('ecs.static_loading');
     final exprs         = [];
@@ -519,7 +519,7 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
  * @param _universe Universe to add systems to.
  * @param _systems Systems to add.
  */
-macro function setSystems(_universe : Expr, _systems : Array<Expr>)
+macro function setSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
 {
     final exprs = [];
 
@@ -568,7 +568,7 @@ macro function setSystems(_universe : Expr, _systems : Array<Expr>)
  * @param _universe Universe to remove systems from.
  * @param _systems fields pointing to system objects to remove.
  */
-macro function removeSystems(_universe : Expr, _systems : Array<Expr>)
+macro function removeSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
 {
     final exprs = [];
 
@@ -605,7 +605,7 @@ macro function removeSystems(_universe : Expr, _systems : Array<Expr>)
  * @param _families Either a family definition variable or an array of family definition variables. 
  * @param _function Code to execute if all the families are active.
  */
-macro function setup(_families : Expr, _function : Expr)
+macro function setup(_families : ExprOf<Family>, _function : Expr)
 {
     final familiesToSetup = switch _families.expr
     {
@@ -704,7 +704,7 @@ macro function setup(_families : Expr, _function : Expr)
  * @param _family Family to iterate over.
  * @param _function Code to run for each entity in the family.
  */
-macro function iterate(_family : Expr, _function : Expr)
+macro function iterate(_family : ExprOf<Family>, _function : Expr)
 {
     // Get the name of the family to iterate over.
     final familyIdent = switch _family.expr
@@ -759,7 +759,7 @@ macro function iterate(_family : Expr, _function : Expr)
         forExpr.push(e);
     }
 
-    return macro for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
+    return macro @:pos(Context.currentPos()) for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
 }
 
 /**
@@ -772,7 +772,7 @@ macro function iterate(_family : Expr, _function : Expr)
  * ```
  * @param _type Type to get the table for.
  */
-macro function table(_type : Expr)
+macro function table(_type : ExprOf<TableType>)
 {
     return switch _type.expr
     {
@@ -828,3 +828,13 @@ private function isLocalIdent(_target : String, _classType : ClassType, _vars : 
         None;
     }
 }
+
+abstract TableType(String) from String to String {
+	function new(value) {
+		 this = value;
+	}
+	
+	@:from static function fromClass(input:Class<Dynamic>) {
+		 return new TableType(Type.getClassName(input));
+	}
+ }

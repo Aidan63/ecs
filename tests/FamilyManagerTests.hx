@@ -95,6 +95,29 @@ class FamilyManagerTests extends BuddySuite
 
                 system.counter.should.be(0);
             });
+
+            describe('Regressions', {
+                it('will not deactivate all families when removing resources', {
+                    final world  = new Universe(8);
+                    final system = new TestMultiFamilyResourceAccessSystem(world);
+    
+                    world.setSystems(system);
+                    world.setComponents(world.createEntity(), TestComponent1);
+    
+                    world.setResources(TestResource1);
+                    system.counter1.should.be(1);
+                    system.counter2.should.be(0);
+    
+                    world.setResources(TestResource2);
+                    system.counter1.should.be(1);
+                    system.counter2.should.be(1);
+    
+                    world.removeResources(TestResource1);
+    
+                    system.counter1.should.be(0);
+                    system.counter2.should.be(1);
+                }); 
+            });
         });
     }
 }
@@ -142,6 +165,48 @@ class TestResourceAccessSystem extends System
         family.onEntityRemoved.subscribe(entity -> {
             setup(family, {
                 counter -= res.const;
+            });
+        });
+    }
+}
+
+class TestMultiFamilyResourceAccessSystem extends System
+{
+    public var counter1 = 0;
+
+    public var counter2 = 0;
+
+    @:fullFamily var family1 : {
+        requires  : { comp : TestComponent1 },
+        resources : { res : TestResource1 }
+    }
+
+    @:fullFamily var family2 : {
+        requires  : { comp : TestComponent1 },
+        resources : { res : TestResource2 }
+    }
+
+    override function onAdded()
+    {
+        family1.onEntityAdded.subscribe(entity -> {
+            setup(family1, {
+                counter1 += 1;
+            });
+        });
+        family1.onEntityRemoved.subscribe(entity -> {
+            setup(family1, {
+                counter1 -= 1;
+            });
+        });
+
+        family2.onEntityAdded.subscribe(entity -> {
+            setup(family2, {
+                counter2 += 1;
+            });
+        });
+        family2.onEntityRemoved.subscribe(entity -> {
+            setup(family2, {
+                counter2 -= 1;
             });
         });
     }

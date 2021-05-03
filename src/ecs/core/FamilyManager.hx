@@ -62,9 +62,17 @@ class FamilyManager
         }
     }
 
-    public function tryDeactivate(_id : Int)
+    public function tryDeactivate(_id : Int, resourceID : Int)
     {
-        if (families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
+        if (!resources.flags.isSet(resourceID))
+        {
+            return;
+        }
+        if (!families[_id].isActive())
+        {
+            return;
+        }
+        if (families[_id].resourcesMask.isSet(resourceID))
         {
             families[_id].deactivate();
         }

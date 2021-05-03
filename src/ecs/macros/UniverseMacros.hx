@@ -475,17 +475,15 @@ macro function removeResources(_universe : Expr, _resources : Array<Expr>)
         }
     }
 
-    // Remove the resources once each family has been deactivated
-    if (staticLoading)
-    {
-        for (resourceID in adder)
-        {
-            exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
-        }
-    }
-    else
+    if (!staticLoading)
     {
         exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i));
+    }
+
+    // Remove the resources once each family has been deactivated
+    for (resourceID in adder)
+    {
+        exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
     }
 
     return macro $b{ exprs };

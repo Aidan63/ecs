@@ -64,7 +64,7 @@ class FamilyManager
 
     public function tryDeactivate(_id : Int)
     {
-        if (families[_id].isActive() && !resources.flags.areSet(families[_id].resourcesMask))
+        if (families[_id].isActive() && resources.flags.areSet(families[_id].resourcesMask))
         {
             families[_id].deactivate();
         }

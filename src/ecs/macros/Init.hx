@@ -13,7 +13,7 @@ var hasAddedEcsMeta = false;
 
 macro function printFullReport()
 {
-    Context.onAfterGenerate(() -> {
+    Context.onGenerate(_ -> {
         Sys.println('${ getComponentCount() } components registered');
         for (hash => data in getComponentMap())
         {

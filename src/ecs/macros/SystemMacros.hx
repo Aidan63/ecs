@@ -134,6 +134,11 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
+    // Insert super calls into the onAdded and onRemoved events to ensure extended systems are properly setup
+    final baseIdx = 1;
+    insertExprIntoFunction(0, added, macro super.onAdded());
+    insertExprIntoFunction(0, removed, macro super.onRemoved());
+
     // First pass over the extracted families we define a new family field in the system for that type.
     // We also add a call to get that family from the world at the top of the `onAdded` function.
     for (idx => family in families)
@@ -149,7 +154,7 @@ macro function familyConstruction() : Array<Field>
 
         final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
 
-        insertExprIntoFunction(idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
+        insertExprIntoFunction(baseIdx + idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
     }
 
     // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
@@ -166,7 +171,7 @@ macro function familyConstruction() : Array<Field>
 
         // Inserting at `families.length + idx` ensures all out `getTable` calls happen after the families are fetched.
         insertExprIntoFunction(
-            families.length + idx,
+            baseIdx + families.length + idx,
             added,
             macro $i{ name } = cast universe.components.getTable($v{ component.uID }));
     }

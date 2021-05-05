@@ -33,7 +33,7 @@ macro function printFullReport()
             Sys.println('  components');
             for (component in definition.components)
             {
-                Sys.println('    hash : ${ component.hash }, id : ${ component.uID }, name : "${ component.name }, type : ${ component.type.toString() }');
+                Sys.println('    hash : ${ component.hash }, id : ${ component.uID }, name : ${ component.name }, type : ${ component.type.toString() }');
             }
 
             Sys.println('  resources');

@@ -93,7 +93,7 @@ class Family
         return active;
     }
 
-    public function iterator()
+    public inline function iterator()
     {
         return new FamilyIterator(entities, isActive());
     }

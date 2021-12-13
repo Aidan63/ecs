@@ -1,12 +1,15 @@
 package ecs.macros;
 
 import haxe.ds.ReadOnlyArray;
+import ecs.ds.Result;
 import haxe.macro.Expr;
 import haxe.macro.Context;
-import ecs.ds.Result;
+
+#if macro
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.ComponentCache;
+#end
 import haxe.macro.Type;
 
 using Lambda;

@@ -1,7 +1,9 @@
 package ecs.macros;
 
 import haxe.macro.Expr;
+#if macro
 import ecs.macros.ComponentCache;
+#end
 
 using Safety;
 using haxe.macro.Tools;

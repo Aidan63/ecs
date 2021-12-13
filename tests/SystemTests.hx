@@ -1,10 +1,8 @@
 import ecs.System;
 import ecs.Universe;
 import buddy.BuddySuite;
-import ecs.macros.UniverseMacros;
 
 using buddy.Should;
-using ecs.macros.UniverseMacros;
 
 class SystemTests extends BuddySuite
 {

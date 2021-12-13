@@ -1,9 +1,11 @@
 package ecs.macros;
 
 import haxe.macro.Expr;
+#if macro
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.ComponentCache;
+#end
 
 using haxe.macro.Tools;
 

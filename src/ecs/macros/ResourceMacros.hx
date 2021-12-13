@@ -1,6 +1,8 @@
 package ecs.macros;
 
+#if macro
 import ecs.macros.ResourceCache;
+#end
 
 macro function createResourceVector()
 {

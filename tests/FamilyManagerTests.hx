@@ -1,11 +1,8 @@
 import ecs.System;
 import ecs.Universe;
-import ecs.macros.UniverseMacros.setup;
-import ecs.macros.UniverseMacros.iterate;
 import buddy.BuddySuite;
 
 using buddy.Should;
-using ecs.macros.UniverseMacros;
 
 class FamilyManagerTests extends BuddySuite
 {

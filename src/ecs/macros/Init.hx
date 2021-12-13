@@ -1,11 +1,12 @@
 package ecs.macros;
 
-import haxe.macro.Context;
-import haxe.macro.Compiler;
 import haxe.macro.Expr;
+import haxe.macro.Context;
+#if macro
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.ComponentCache;
+#end
 
 using haxe.macro.TypeTools;
 

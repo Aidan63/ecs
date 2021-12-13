@@ -2,7 +2,6 @@ package ecs.macros;
 
 import haxe.ds.Option;
 import haxe.macro.Type;
-import haxe.macro.Context;
 
 using Safety;
 

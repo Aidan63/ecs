@@ -3,8 +3,6 @@ import systems.VelocitySystem;
 import components.Components.Position;
 import components.Components.Velocity;
 
-using ecs.macros.UniverseMacros;
-
 function main()
 {
     final universe = new Universe(1024);

@@ -1,7 +1,6 @@
 package systems;
 
 import ecs.System;
-import ecs.macros.UniverseMacros;
 import components.Components.Position;
 import components.Components.Velocity;
 

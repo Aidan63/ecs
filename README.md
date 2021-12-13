@@ -51,7 +51,6 @@ Families are groups of components we are interested in, as components are added 
 package systems;
 
 import ecs.System;
-import ecs.macros.UniverseMacros;
 import components.Components.Position;
 import components.Components.Velocity;
 
@@ -81,14 +80,12 @@ import systems.VelocitySystem;
 import components.Components.Position;
 import components.Components.Velocity;
 
-using ecs.macros.UniverseMacros;
-
 function main()
 {
     final universe = new Universe(1024);
     final object   = universe.createEntity();
     
-    universe.setSystems(VelocitySystem); //setSystem is found by the static extension in `UniverseMacros`
+    universe.setSystems(VelocitySystem);
 
     universe.setComponents(object,
         Position,
@@ -164,8 +161,6 @@ class BulletCollisionSystem extends System
 Resources are components which are attached to the universe instead of entities. They can be required by families and are very useful for data which could be considered "singleton" in nature (e.g. current level data).
 
 ```haxe
-import ecs.macros.UniverseMacros;
-
 class MySystem extends System
 {
     @:fullFamily var myFamily : {
@@ -199,8 +194,6 @@ The `fastFamily` meta provides an easy way to define a family which only require
 :information_source: `fastFamily` does not provide any runtime speed increases over `fullFamily`, the fast comes from the fact that its faster to type when your family only needs components.
 
 ```haxe
-import ecs.macros.UniverseMacros;
-
 class MySystem extends System
 {
     @:fastFamily myFamily1 : { pos : Position, vel : Velocity, _ : Sprite };
@@ -220,8 +213,6 @@ class MySystem extends System
 The `fullFamily` meta allows defining families which require both components and resources. Variables tagged with this meta must be an object declaration which has a `requires` and `resources` field. The `requires` field is for defining what components are needed and follows all the same rules outlined in the above `fastFamily` section.
 
 ```haxe
-import ecs.macros.UniverseMacros;
-
 class MySystem extends System
 {
     @:fastFamily myFamily : {
@@ -249,8 +240,6 @@ class MySystem extends System
 You may find yourself wanting to run pre and post iterate code for the family as a whole in the update function. The following shows an example of this.
 
 ```haxe
-import ecs.macros.UniverseMacros;
-
 class SpriteDrawerSystem extends System
 {
     @:fullFamily var sprites : {
@@ -368,7 +357,6 @@ class MySystem extends System
 ```
 
 ```haxe
-
 class MySystem extends System
 {
     var myFamily : ecs.Family;

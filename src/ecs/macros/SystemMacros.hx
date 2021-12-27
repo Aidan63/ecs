@@ -1,16 +1,16 @@
 package ecs.macros;
 
 import haxe.ds.ReadOnlyArray;
-import ecs.ds.Result;
+import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.Context;
 
+import ecs.ds.Result;
 #if macro
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.ComponentCache;
 #end
-import haxe.macro.Type;
 
 using Lambda;
 using Safety;
@@ -19,7 +19,10 @@ using haxe.macro.Tools;
 /**
  * Stores the user specified name and the complex type of a requested component or resource.
  */
-typedef FamilyField = {
+@:structInit
+@:publicFields
+class FamilyField
+{
     final name : String;
     final type : ComplexType;
 }
@@ -27,23 +30,47 @@ typedef FamilyField = {
 /**
  * Stores all the info on a registered component or resource.
  */
-typedef RegisteredField = {
-    final name : String;
-    final type : Type;
-    final hash : String;
-    final uID : Int;
+class RegisteredField
+{
+    public final name : String;
+    public final type : Type;
+    public final hash : String;
+    public final uID : Int;
+
+    public function new(_name, _type, _hash, _uID)
+    {
+        name = _name;
+        type = _type;
+        hash = _hash;
+        uID  = _uID;
+    }
 }
 
-typedef FamilyError = {
-    final message : String;
-    final pos : Position;
+class FamilyError
+{
+    public final message : String;
+    public final pos : Position;
+
+    public function new(_message, _pos)
+    {
+        message = _message;
+        pos     = _pos;
+    }
 }
 
-typedef FamilyDefinition = {
+@:structInit
+@:publicFields
+class FamilyDefinition
+{
     /**
      * Name of this family.
      */
     final name : String;
+
+    /**
+     * Position of the original family field.
+     */
+    final pos : Position;
 
     /**
      * All the static resources requested by this family.
@@ -77,16 +104,12 @@ macro function familyConstruction() : Array<Field>
                 case Ok(data):
                     families.push({
                         name       : field.name,
+                        pos        : field.pos,
                         components : data.map(f -> {
                             final resolved  = Context.resolveType(f.type, field.pos);
                             final signature = Utils.signature(resolved);
 
-                            return {
-                                name : f.name,
-                                type : resolved,
-                                uID  : registerComponent(signature, resolved),
-                                hash : signature
-                            };
+                            return new RegisteredField(f.name, resolved, signature, registerComponent(signature, resolved));
                         }),
                         resources  : []
                     });
@@ -100,35 +123,30 @@ macro function familyConstruction() : Array<Field>
                 case Ok(data):
                     families.push({
                         name       : data.name,
+                        pos        : field.pos,
                         components : switch data.components
                         {
-                            case Ok(array): array.map(f -> {
-                                final resolved  = Context.resolveType(f.type, field.pos);
-                                final signature = Utils.signature(resolved);
+                            case Ok(array):
+                                array.map(f -> {
+                                    final resolved  = Context.resolveType(f.type, field.pos);
+                                    final signature = Utils.signature(resolved);
 
-                                return {
-                                    name : f.name,
-                                    type : resolved,
-                                    uID  : registerComponent(signature, resolved),
-                                    hash : signature
-                                };
-                            });
-                            case Error(error): Context.error(error.message, error.pos);
+                                    return new RegisteredField(f.name, resolved, signature, registerComponent(signature, resolved));
+                                });
+                            case Error(error):
+                                Context.error(error.message, error.pos);
                         },
                         resources : switch data.resources
                         {
-                            case Ok(array): array.map(f -> {
-                                final resolved  = Context.resolveType(f.type, field.pos);
-                                final signature = Utils.signature(resolved);
+                            case Ok(array):
+                                array.map(f -> {
+                                    final resolved  = Context.resolveType(f.type, field.pos);
+                                    final signature = Utils.signature(resolved);
 
-                                return {
-                                    name : f.name,
-                                    type : resolved,
-                                    uID  : registerResource(signature),
-                                    hash : signature
-                                };
-                            });
-                            case Error(error): Context.error(error.message, error.pos);
+                                    return new RegisteredField(f.name, resolved, signature, registerResource(signature));
+                                });
+                            case Error(error):
+                                Context.error(error.message, error.pos);
                         }
                     });
                 case Error(error): Context.error(error.message, field.pos);
@@ -151,7 +169,7 @@ macro function familyConstruction() : Array<Field>
     {
         output.push({
             name : family.name,
-            pos  : Context.currentPos(),
+            pos  : family.pos,
             kind : FVar(macro : ecs.Family)
         });
 
@@ -268,7 +286,7 @@ private function extractFastFamily(_field : Field)
     return switch _field.kind
     {
         case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
-        case other: Error({ message : 'Unexpected field kind $other, expected FVar', pos : _field.pos });
+        case other: Error(new FamilyError('Unexpected field kind $other, expected FVar', _field.pos));
     }
 }
 
@@ -289,7 +307,7 @@ private function extractFullFamily(_field : Field) : Result<{ name : String, com
                 .let(f -> switch f.kind
                     {
                         case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
-                        case other: Error({ message : 'Unexpected object field expression $other', pos : f.pos });
+                        case other: Error(new FamilyError('Unexpected object field expression $other', f.pos));
                     })
                 .or(Ok([]));
             final resources = fields
@@ -297,7 +315,7 @@ private function extractFullFamily(_field : Field) : Result<{ name : String, com
                 .let(f -> switch f.kind
                     {
                         case FVar(TAnonymous(fields), _): extractFamilyComponentsFromObject(fields);
-                        case other: Error({ message : 'Unexpected object field expression $other', pos : f.pos });
+                        case other: Error(new FamilyError('Unexpected object field expression $other', f.pos));
                     })
                 .or(Ok([]));
 
@@ -306,7 +324,7 @@ private function extractFullFamily(_field : Field) : Result<{ name : String, com
                 components : requires,
                 resources  : resources
             });
-        case other: Error({ message : 'Unexpected field kind ${ other }, expected FVar', pos : _field.pos });
+        case other: Error(new FamilyError('Unexpected field kind ${ other }, expected FVar', _field.pos));
     }
 }
 
@@ -331,7 +349,7 @@ private function extractFamilyComponentsFromObject(_fields : ReadOnlyArray<Field
                     type : ct
                 });
             case other:
-                return Error({ message : 'Unexpected expression ${ other }, expected FVar(_, EConst(CIdent(_)))', pos : field.pos });
+                return Error(new FamilyError('Unexpected expression ${ other }, expected FVar(_, EConst(CIdent(_)))', field.pos));
         }
     }
 

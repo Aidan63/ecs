@@ -58,12 +58,15 @@ typedef FamilyDefinition = {
 
 macro function familyConstruction() : Array<Field>
 {
+    final dummy  = Utils.getInvalidationFile();
     final fields = Context.getBuildFields();
     final output = [];
 
     final added    = getOrCreateOverrideFunction('onAdded', fields, Context.currentPos());
     final removed  = getOrCreateOverrideFunction('onRemoved', fields, Context.currentPos());
     final families = new Array<FamilyDefinition>();
+
+    sys.io.File.saveContent(dummy, Std.string(Math.random() * 2147483647));
 
     for (field in fields)
     {

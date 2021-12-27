@@ -48,6 +48,13 @@ macro function printFullReport()
 
 macro function inject()
 {
+    // Whenever a system changes we need a way to invalidate the core ecs types.
+    // The easiest way to do this is to register a dependency to a dummy file.
+    // Whenever a systems auto macro is called it writes a random number to that file which should then invalidate the ecs types.
+    Utils.setInvalidationFile(haxe.macro.Compiler.getOutput());
+
+    Context.registerModuleDependency('ecs.Universe', Utils.getInvalidationFile());
+
     if (!Context.defined('ecs.static_loading'))
     {
         Context.onGenerate(_ -> {
@@ -84,6 +91,20 @@ macro function inject()
             componentManager.meta.add('components', [ for (c in getComponentMap()) macro $v{ c.id } ], componentManager.pos);
         });
     }
+
+    return macro null;
+}
+
+/**
+ * Set a custom location to store the ecs invalidation file.
+ * By default it is set to the compiler output folder in the init functon.
+ * @param _directory Folder to place the invalidation file.
+ */
+macro function setInvalidationFileDirectory(_directory : String)
+{
+    Utils.setInvalidationFile(_directory);
+
+    Context.registerModuleDependency('ecs.Universe', Utils.getInvalidationFile());
 
     return macro null;
 }

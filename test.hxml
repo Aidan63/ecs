@@ -12,4 +12,5 @@
 --dce full
 --debug
 --macro ecs.macros.Init.inject()
+--macro ecs.macros.Init.setInvalidationFileDirectory('tests/bin')
 --macro instrument.Instrumentation.coverage([ 'ecs' ], [ 'src' ])

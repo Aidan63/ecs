@@ -5,6 +5,7 @@ import haxe.ds.ReadOnlyArray;
 import ecs.macros.SystemMacros.FamilyDefinition;
 
 using Lambda;
+using haxe.macro.TypeTools;
 
 /**
  * Map of family IDs keyed by concatenated component types which compose that family.
@@ -134,13 +135,13 @@ private function hash(_family : FamilyDefinition) : String
     buffer.add('c:');
     for (comp in _family.components)
     {
-        buffer.add(comp.type);
+        buffer.add(comp.type.toString());
     }
 
     buffer.add('r:');
     for (res in _family.resources)
     {
-        buffer.add(res.type);
+        buffer.add(res.type.toString());
     }
 
     return buffer.toString();

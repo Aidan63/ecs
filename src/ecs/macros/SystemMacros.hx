@@ -75,12 +75,12 @@ class FamilyDefinition
     /**
      * All the static resources requested by this family.
      */
-    final resources : ReadOnlyArray<RegisteredField>;
+    final resources : Array<RegisteredField>;
 
     /**
      * All of the components requested by this family.
      */
-    final components : ReadOnlyArray<RegisteredField>;
+    final components : Array<RegisteredField>;
 }
 
 macro function familyConstruction() : Array<Field>
@@ -158,6 +158,12 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
+    // Exit early
+    if (families.length == 0)
+    {
+        return output;
+    }
+
     // Insert super calls into the onAdded and onRemoved events to ensure extended systems are properly setup
     final baseIdx = 1;
     insertExprIntoFunction(0, added, macro super.onAdded());
@@ -172,6 +178,9 @@ macro function familyConstruction() : Array<Field>
             pos  : family.pos,
             kind : FVar(macro : ecs.Family)
         });
+
+        family.components.sort(sortFields);
+        family.resources.sort(sortFields);
 
         // Insert out `family.get` calls at the very top of the `onAdded` function.
         // This we we can always access them in a overridden `onAdded`.
@@ -353,8 +362,6 @@ private function extractFamilyComponentsFromObject(_fields : ReadOnlyArray<Field
         }
     }
 
-    extracted.sort(sort);
-
     return Ok(extracted);
 }
 
@@ -387,10 +394,10 @@ private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>
  * @param o1 Object 1.
  * @param o2 Object 2.
  */
-private function sort(o1 : Dynamic, o2 : Dynamic)
+private function sortFields(o1 : RegisteredField, o2 : RegisteredField)
 {
-    final name1 = o1.type;
-    final name2 = o2.type;
+    final name1 = o1.hash;
+    final name2 = o2.hash;
 
     if (name1 < name2)
     {

@@ -16,7 +16,7 @@ private var invalidationFile : String;
  */
 function signature(_type : Type)
 {
-    return Md5.encode(_type.toComplexType().toString());
+    return Md5.encode(_type.toString());
 }
 
 function setInvalidationFile(_output : String)

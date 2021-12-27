@@ -6,11 +6,11 @@
 -D coverage-lcov-reporter
 -D coverage-lcov-reporter=lcov.info
 -D reporter=buddy.reporting.XUnit2Reporter
+-D ecs.invalidationFile=tests/bin/.ecs_invalidation
 -p src
 -p tests
 -m Main
 --dce full
 --debug
 --macro ecs.macros.Init.inject()
---macro ecs.macros.Init.setInvalidationFileDirectory('tests/bin')
 --macro instrument.Instrumentation.coverage([ 'ecs' ], [ 'src' ])

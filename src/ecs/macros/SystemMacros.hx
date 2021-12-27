@@ -85,7 +85,6 @@ class FamilyDefinition
 
 macro function familyConstruction() : Array<Field>
 {
-    final dummy  = Utils.getInvalidationFile();
     final fields = Context.getBuildFields();
     final output = [];
 
@@ -93,7 +92,11 @@ macro function familyConstruction() : Array<Field>
     final removed  = getOrCreateOverrideFunction('onRemoved', fields, Context.currentPos());
     final families = new Array<FamilyDefinition>();
 
-    sys.io.File.saveContent(dummy, Std.string(Math.random() * 2147483647));
+    sys.io.File.saveContent(Utils.invalidationFile, Std.string(Math.random() * 2147483647));
+
+#if (debug && !ecs.no_debug_output)
+    Sys.println('[ecs] System wrote to invalidation file ${ Utils.invalidationFile }');
+#end
 
     for (field in fields)
     {

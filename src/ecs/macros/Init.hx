@@ -1,7 +1,9 @@
 package ecs.macros;
 
+import haxe.io.Path;
 import haxe.macro.Expr;
 import haxe.macro.Context;
+import haxe.macro.Compiler;
 #if macro
 import ecs.macros.FamilyCache;
 import ecs.macros.ResourceCache;
@@ -51,14 +53,40 @@ macro function inject()
     // Whenever a system changes we need a way to invalidate the core ecs types.
     // The easiest way to do this is to register a dependency to a dummy file.
     // Whenever a systems auto macro is called it writes a random number to that file which should then invalidate the ecs types.
-    Utils.setInvalidationFile(haxe.macro.Compiler.getOutput());
+    final file = switch Context.definedValue('ecs.invalidationFile')
+    {
+        case null:
+            final output           = Compiler.getOutput();
+            final invalidationFile = '.ecs_invalidation';
+            final invalidationPath = if ('' == Path.extension(output))
+            {
+                Path.join([ output, invalidationFile ]);
+            }
+            else
+            {
+                Path.join([ Path.directory(output), invalidationFile ]);
+            }
+        
+            if (!sys.FileSystem.exists(Path.directory(invalidationPath)))
+            {
+                sys.FileSystem.createDirectory(Path.directory(invalidationPath));
+            }
 
-    final file = Utils.getInvalidationFile();
+            invalidationFile;
+        case path:
+            path;
+    }
+    
+    Utils.invalidationFile = file;
 
     Context.registerModuleDependency('ecs.Universe', file);
     Context.registerModuleDependency('ecs.core.ComponentManager', file);
     Context.registerModuleDependency('ecs.core.ResourceManager', file);
     Context.registerModuleDependency('ecs.core.FamilyManager', file);
+
+#if (debug && !ecs.no_debug_output)
+    Sys.println('[ecs] Set invalidation file to $file');
+#end
 
     if (!Context.defined('ecs.static_loading'))
     {
@@ -96,25 +124,6 @@ macro function inject()
             componentManager.meta.add('components', [ for (c in getComponentMap()) macro $v{ c.id } ], componentManager.pos);
         });
     }
-
-    return macro null;
-}
-
-/**
- * Set a custom location to store the ecs invalidation file.
- * By default it is set to the compiler output folder in the init functon.
- * @param _directory Folder to place the invalidation file.
- */
-macro function setInvalidationFileDirectory(_directory : String)
-{
-    Utils.setInvalidationFile(_directory);
-
-    final file = Utils.getInvalidationFile();
-
-    Context.registerModuleDependency('ecs.Universe', file);
-    Context.registerModuleDependency('ecs.core.ComponentManager', file);
-    Context.registerModuleDependency('ecs.core.ResourceManager', file);
-    Context.registerModuleDependency('ecs.core.FamilyManager', file);
 
     return macro null;
 }

@@ -53,7 +53,12 @@ macro function inject()
     // Whenever a systems auto macro is called it writes a random number to that file which should then invalidate the ecs types.
     Utils.setInvalidationFile(haxe.macro.Compiler.getOutput());
 
-    Context.registerModuleDependency('ecs.Universe', Utils.getInvalidationFile());
+    final file = Utils.getInvalidationFile();
+
+    Context.registerModuleDependency('ecs.Universe', file);
+    Context.registerModuleDependency('ecs.core.ComponentManager', file);
+    Context.registerModuleDependency('ecs.core.ResourceManager', file);
+    Context.registerModuleDependency('ecs.core.FamilyManager', file);
 
     if (!Context.defined('ecs.static_loading'))
     {
@@ -104,7 +109,12 @@ macro function setInvalidationFileDirectory(_directory : String)
 {
     Utils.setInvalidationFile(_directory);
 
-    Context.registerModuleDependency('ecs.Universe', Utils.getInvalidationFile());
+    final file = Utils.getInvalidationFile();
+
+    Context.registerModuleDependency('ecs.Universe', file);
+    Context.registerModuleDependency('ecs.core.ComponentManager', file);
+    Context.registerModuleDependency('ecs.core.ResourceManager', file);
+    Context.registerModuleDependency('ecs.core.FamilyManager', file);
 
     return macro null;
 }

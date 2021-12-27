@@ -10,8 +10,6 @@ import ecs.macros.ComponentCache;
 
 using haxe.macro.TypeTools;
 
-var hasAddedEcsMeta = false;
-
 macro function printFullReport()
 {
     Context.onGenerate(_ -> {
@@ -52,11 +50,8 @@ macro function inject()
 {
     if (!Context.defined('ecs.static_loading'))
     {
-        Context.onAfterTyping(_ -> {
-            if (hasAddedEcsMeta)
-            {
-                return;
-            }
+        Context.onGenerate(_ -> {
+            // TODO : Search the provided types argument instead of using `Context.getType()`?
 
             // Find the `ecs.core.FamilyManager` class and add meta data about all of the families.
             // These will then be read at start up and added to the family manager.
@@ -87,8 +82,6 @@ macro function inject()
             final componentManager = Context.getType('ecs.core.ComponentManager').getClass();
             componentManager.meta.add('componentCount', [ macro $v{ getComponentCount() } ], componentManager.pos);
             componentManager.meta.add('components', [ for (c in getComponentMap()) macro $v{ c.id } ], componentManager.pos);
-
-            hasAddedEcsMeta = true;
         });
     }
 

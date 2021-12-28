@@ -109,7 +109,7 @@ macro function familyConstruction() : Array<Field>
                         name       : field.name,
                         pos        : field.pos,
                         components : data.map(f -> {
-                            final resolved  = Context.resolveType(f.type, field.pos);
+                            final resolved  = try Context.resolveType(f.type, field.pos) catch (_) Context.error('Unable to resolve component type ${ f.type.toString() }', field.pos);
                             final signature = Utils.signature(resolved);
 
                             return new RegisteredField(f.name, resolved, signature, registerComponent(signature, resolved));
@@ -131,7 +131,7 @@ macro function familyConstruction() : Array<Field>
                         {
                             case Ok(array):
                                 array.map(f -> {
-                                    final resolved  = Context.resolveType(f.type, field.pos);
+                                    final resolved  = try Context.resolveType(f.type, field.pos) catch (_) Context.error('Unable to resolve component type ${ f.type.toString() }', field.pos);
                                     final signature = Utils.signature(resolved);
 
                                     return new RegisteredField(f.name, resolved, signature, registerComponent(signature, resolved));
@@ -143,7 +143,7 @@ macro function familyConstruction() : Array<Field>
                         {
                             case Ok(array):
                                 array.map(f -> {
-                                    final resolved  = Context.resolveType(f.type, field.pos);
+                                    final resolved  = try Context.resolveType(f.type, field.pos) catch (_) Context.error('Unable to resolve resource type ${ f.type.toString() }', field.pos);
                                     final signature = Utils.signature(resolved);
 
                                     return new RegisteredField(f.name, resolved, signature, registerResource(signature));

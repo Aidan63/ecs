@@ -136,7 +136,7 @@ class Universe
                                 insert(registerComponent(signature(type), type), component);
                             }
                         case None:
-                            final resolved  = Context.getType(s);
+                            final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
                             final signature = signature(resolved);
     
                             if (staticLoading)
@@ -147,7 +147,7 @@ class Universe
                                         switch resolved.toComplexType()
                                         {
                                             case TPath(tp): insert(id, macro new $tp());
-                                            case other: Context.error('Component $other should be TPath', component.pos);
+                                            case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
                                         }
                                     case None: Context.warning('Component $resolved is not used in any families', component.pos);
                                 }
@@ -157,25 +157,18 @@ class Universe
                                 switch resolved.toComplexType()
                                 {
                                     case TPath(tp): insert(registerComponent(signature, resolved), macro new $tp());
-                                    case other: Context.error('Component $other should be TPath', component.pos);
+                                    case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
                                 }
                             }
                     }
                 case _:
-                    try
+                    final resolved  = try Context.typeof(component) catch (_) Context.error('Unable to get the type of ${ component.toString() }', component.pos);
+                    final signature = signature(resolved);
+
+                    switch getComponentID(signature)
                     {
-                        final resolved  = Context.typeof(component);
-                        final signature = signature(resolved);
-    
-                        switch getComponentID(signature)
-                        {
-                            case Some(id): insert(id, component);
-                            case None: Context.warning('Component ${ resolved } is not used in any families', component.pos);
-                        }
-                    }
-                    catch (_)
-                    {
-                        Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
+                        case Some(id): insert(id, component);
+                        case None: Context.warning('Component ${ resolved } is not used in any families', component.pos);
                     }
             }
         }
@@ -256,7 +249,7 @@ class Universe
                                 case None: Context.warning('Component ${ type } is not used in any families', component.pos);
                             }
                         case None:
-                            final resolved  = Context.getType(s);
+                            final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
                             final signature = signature(resolved);
     
                             switch getComponentID(signature)
@@ -358,29 +351,22 @@ class Universe
                         case Some(type):
                             insert(registerResource(signature(type)), resource);
                         case None:
-                            final resolved  = Context.getType(s);
+                            final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of resource expression ${ resource.toString() }', resource.pos);
                             final signature = signature(resolved);
                             final id        = registerResource(signature);
     
                             switch resolved.toComplexType()
                             {
                                 case TPath(tp): insert(id, macro new $tp());
-                                case other: Context.error('Resource $other should be TPath', resource.pos);
+                                case other: Context.error('Resource ${ other.toString() } should be TPath', resource.pos);
                             }
                     }
                 case _:
-                    try
-                    {
-                        final resolved  = Context.typeof(resource);
-                        final signature = signature(resolved);
-                        final id        = registerResource(signature);
-    
-                        insert(id, resource);
-                    }
-                    catch (_)
-                    {
-                        Context.error('Unable to get type of resource expression $resource', resource.pos);
-                    }
+                    final resolved  = try Context.typeof(resource) catch (_) Context.error('Unable to get type of resource expression $resource', resource.pos);
+                    final signature = signature(resolved);
+                    final id        = registerResource(signature);
+
+                    insert(id, resource);
             }
         }
     
@@ -448,7 +434,7 @@ class Universe
                                 case None: Context.warning('Resource $type is not used in any families', resource.pos);
                             }
                         case None:
-                            final resolved  = Context.getType(s);
+                            final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of resource expression ${ resource.toString() }', resource.pos);
                             final signature = signature(resolved);
     
                             switch getResourceID(signature)
@@ -457,7 +443,7 @@ class Universe
                                     switch resolved.toComplexType()
                                     {
                                         case TPath(_): insert(id);
-                                        case other:
+                                        case other: Context.error('Resource ${ other.toString() } should be TPath', resource.pos);
                                     }
                                 case None: Context.warning('Resource $resolved is not used in any families', resource.pos);
                             }
@@ -523,7 +509,9 @@ class Universe
                         case Some(_):
                             exprs.push(macro $e{ _universe }.systems.add($e{ system }));
                         case None:
-                            switch Context.getType(s).toComplexType()
+                            final resolved = try Context.getType(s) catch (_) Context.error('Unable to get type of system expression ${ system.toString() }', system.pos);
+
+                            switch resolved.toComplexType()
                             {
                                 case TPath(tp): exprs.push(macro $e{ _universe }.systems.add(new $tp($e{ _universe })));
                                 case other: Context.error('System $other should be TPath', system.pos);

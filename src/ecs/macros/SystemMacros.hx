@@ -161,12 +161,6 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
-    // Exit early
-    if (families.length == 0)
-    {
-        return output;
-    }
-
     // Insert super calls into the onAdded and onRemoved events to ensure extended systems are properly setup
     final baseIdx = 1;
     insertExprIntoFunction(0, added, macro super.onAdded());

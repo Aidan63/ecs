@@ -4,7 +4,7 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
-		"lix": "^15.9.0"
+		"lix": "^15.11.6"
 	},
 	"scripts": {
 		"postinstall": "lix download"

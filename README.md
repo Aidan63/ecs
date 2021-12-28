@@ -9,7 +9,7 @@ All components and families are resolved at compile time allowing entities and c
 
 Inspired / ideas stolen from [clay_ecs](https://github.com/RudenkoArts/clay_ecs/) and [baldrick](https://github.com/hamaluik/baldrick).
 
-Requires Haxe 4.2 nightlies as well as the safety and bits library.
+Requires Haxe 4.2 as well as the safety and bits library.
 
 ## **Quick Example**
 

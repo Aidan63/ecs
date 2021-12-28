@@ -66,18 +66,18 @@ macro function inject()
             {
                 Path.join([ Path.directory(output), invalidationFile ]);
             }
-        
-            if (!sys.FileSystem.exists(Path.directory(invalidationPath)))
-            {
-                sys.FileSystem.createDirectory(Path.directory(invalidationPath));
-            }
 
             invalidationFile;
         case path:
             path;
     }
-    
+
     Utils.invalidationFile = file;
+
+    if (!sys.FileSystem.exists(Path.directory(file)))
+    {
+        sys.FileSystem.createDirectory(Path.directory(file));
+    }
 
     Context.registerModuleDependency('ecs.Universe', file);
     Context.registerModuleDependency('ecs.core.ComponentManager', file);

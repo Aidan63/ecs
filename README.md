@@ -323,11 +323,23 @@ All components and resources requested by a family are guarenteed to still be ac
 
 :information_source: If a family has 10 entities in it and a resource it requires is removed from the universe all subscribers to that families `onEntityRemoved` signal will recieve 10 notifications, one for each entity being removed. In the same fashion when a resource is added any subscribers to a family which now has entities will recieve a notification for each entity added.
 
-### Static Loading
+### Defines
+
+#### ecs.static_loading
 
 By default run time type information is used to store data about all possible components, families, resources, etc. This is then read at universe creation and used to pre-allocate arrays of the correct size. With the `ecs.static_loading` define you can opt out of this loading technique and use one which is entirely macro based. This has some caveats though, static loading is dependant on the compilers parsing order which means if all possible systems haven't yet been parsed by the time the universe constructor is parsed those systems will never been known about and will cause run time crashes.
 
 To use static loading ensure all of your systems are explicitly imported into the class (no wildcard imports or import.hx files) which is constructing the universe.
+
+#### ecs.invalidationFile
+
+For better compatibility with the haxe compilation server a file is used which allows systems to trigger the core ecs classes for wiping from the compilation cache. By default the folder of the output file is used. The compilation server does not define an output file so the invalidation file is placed in the projects root folder.
+
+If you want to place the invalidation file else where this define allows you to specify the location. `-D ecs.invalidationFile=my/custom/path/.ecs_invalidation`
+
+#### ecs.no_debug_output
+
+When the `--debug` flag is used ecs related debug information is printed to stdout, if you do not want this output in debug mode this define will stop it from being output.
 
 ## **Implementation Details**
 

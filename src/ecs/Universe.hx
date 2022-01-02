@@ -60,7 +60,7 @@ class Universe
     {
         components.clear(_entity);
         families.whenEntityDestroyed(_entity);
-	   entities.destroy(_entity.id());
+        entities.destroy(_entity.id());
     }
 
     /**

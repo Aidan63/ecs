@@ -17,10 +17,10 @@ class EntityManager
 
     public function create()
     {
-	   if (binSize > 0)
-	   {
+        if (binSize > 0)
+        {
             return storage[recycleBin[--binSize]];
-	   }
+        }
 	   
         final idx = nextID++;
         final e   = new Entity(idx);

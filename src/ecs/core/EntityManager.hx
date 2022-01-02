@@ -8,10 +8,12 @@ class EntityManager
     final recycleBin : Vector<Int>;
     
     var nextID : Int;
+    var binSize : Int;
 
     public function new(_max)
     {
         storage = new Vector(_max);
+        recycleBin = new Vector(_max);
         nextID  = 0;
     }
 

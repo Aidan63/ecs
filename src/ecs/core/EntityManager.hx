@@ -5,7 +5,8 @@ import haxe.ds.Vector;
 class EntityManager
 {
     final storage : Vector<Entity>;
-
+    final recycleBin : Vector<Int>;
+    
     var nextID : Int;
 
     public function new(_max)
@@ -16,12 +17,22 @@ class EntityManager
 
     public function create()
     {
+	   if (binSize > 0)
+	   {
+            return storage[recycleBin[--binSize]];
+	   }
+	   
         final idx = nextID++;
         final e   = new Entity(idx);
 
         storage[idx] = e;
 
         return e;
+    }
+    
+    public function destroy(_id : Int)
+    {
+        recycleBin[binSize++] = _id;
     }
 
     public function get(_id : Int)

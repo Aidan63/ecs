@@ -16,6 +16,8 @@ import ecs.macros.ComponentCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.FamilyCache;
 
+using Lambda;
+using EnumValue;
 using haxe.macro.Tools;
 #end
 
@@ -496,6 +498,37 @@ class Universe
      */
     public macro function setSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
     {
+#if (ecs.static_loading && !ecs.no_wildcard_warning)
+        // Using wildcard imports to access systems can break things! Wildcard imports are lazily imported, so if the universe it typed before
+        // a system it will never know about it.
+        // This is a simple check to see if we have any wildcard imports or usings, and warn the user if we do.
+
+        for (imp in Context.getLocalImports().filter(i -> i.mode.match(IAll)))
+        {
+            final path = imp.path[0].pos.getInfos().file;
+            final min  = 0;
+            final max  = {
+                var v = 0;
+
+                for (p in imp.path)
+                {
+                    final posMax = p.pos.getInfos().max;
+
+                    if (posMax > v)
+                    {
+                        v = posMax;
+                    }
+                }
+
+                v;
+            }
+
+            Context.warning(
+                '[ecs] Wildcard import detected. Please ensure you are not wildcard importing systems as they are lazily imported and will break at runtime',
+                Context.makePosition({ min : min, max : max, file : path }));
+        }
+#end
+
         final exprs = [];
     
         for (system in _systems)

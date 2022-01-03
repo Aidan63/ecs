@@ -341,6 +341,10 @@ If you want to place the invalidation file else where this define allows you to 
 
 When the `--debug` flag is used ecs related debug information is printed to stdout, if you do not want this output in debug mode this define will stop it from being output.
 
+#### ecs.no_wildcard_warning
+
+Disables compiler warnings about detected wildcard imports in modules which use the `setSystems` universe function.
+
 ## **Implementation Details**
 
 The `ecs.Entity` type is an abstract around an int, `-1` is a special reserved integer ID representing none / a null entity.

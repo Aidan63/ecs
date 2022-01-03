@@ -92,10 +92,13 @@ macro function familyConstruction() : Array<Field>
     final removed  = getOrCreateOverrideFunction('onRemoved', fields, Context.currentPos());
     final families = new Array<FamilyDefinition>();
 
+#if display
     sys.io.File.saveContent(Utils.invalidationFile, Std.string(Math.random() * 2147483647));
 
 #if (debug && !ecs.no_debug_output)
-    Sys.println('[ecs] System wrote to invalidation file ${ Utils.invalidationFile }');
+    Sys.println('[ecs] System ${ Context.getLocalClass().get().name } wrote to invalidation file ${ Utils.invalidationFile }');
+#end
+
 #end
 
     for (field in fields)

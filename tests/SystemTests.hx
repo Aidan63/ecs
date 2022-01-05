@@ -32,6 +32,18 @@ class SystemTests extends BuddySuite
                     system.adderInited.should.be(true);
                 });
             });
+            describe('fetching', {
+                final universe = new Universe(8);
+                final system   = new FetchingSystem(universe);
+                final expected = 7;
+
+                universe.setSystems(system);
+                universe.setComponents(universe.createEntity(), expected);
+
+                it('allows safe access to a specific entities components if its in a family', {
+                    system.number.should.be(expected);
+                });
+            });
         });
     }
 }
@@ -57,5 +69,21 @@ class ExtendedSystem extends Issue4System
     override function onAdded()
     {
         adderInited = true;
+    }
+}
+
+class FetchingSystem extends System
+{
+    @:fastFamily var family : { num : Int };
+
+    public var number (default, null) = -1;
+
+    override function onAdded()
+    {
+        family.onEntityAdded.subscribe(e -> {
+            fetch(family, e, {
+                number = num;
+            });
+        });
     }
 }

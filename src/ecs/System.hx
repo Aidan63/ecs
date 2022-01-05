@@ -209,6 +209,69 @@ using Safety;
 	}
 	
 	/**
+	 * The fetch macro allows you to operate on the components of a specific entity.
+	 * it automates the process of getting the components using the names provided when defining the family.
+	 * 
+	 * ```
+	 * fetch(someFamily, someEntity, {
+	 *     // code here will only be executed if someEntity is in the specified family.
+	 * })
+	 * ```
+	 */
+	macro function fetch(_this : Expr, _family : ExprOf<Family>, _entity : ExprOf<Entity>, _function : Expr)
+	{
+		final familyIdent = switch _family.expr
+		{
+			case EConst(CIdent(s)): s;
+			case _: Context.error('Family passed into fetch must be an identifier', _family.pos);
+		}
+
+		final entityIdent = switch _entity.expr
+		{
+			case EConst(CIdent(s)): s;
+			case _: Context.error('Entity passed into fetch must be an identifier', _entity.pos);
+		}
+
+		final blockExprs = switch _function.expr
+		{
+			case EBlock(exprs): exprs;
+			case _: Context.error('fetch function must be a code block', _function.pos);
+		}
+
+		final clsKey     = '${ signature(Context.getLocalType()) }-${ familyIdent }';
+		final components = switch getFamilyByKey(clsKey)
+		{
+			case Some(family): family.components;
+			case None: Context.error('Unable to find a family with the key $clsKey', _family.pos);
+		}
+
+		final forExpr = [];
+		for (c in components)
+		{
+			final varName   = c.name;
+			final tableName = 'table${ c.hash }';
+			final ct        = c.type.toComplexType();
+	
+			// Defining a component in a family as '_' will skip the variable generation.
+			if (varName != '_')
+			{
+				forExpr.push(macro final $varName = ($i{ tableName }.get($e{ _entity }) : $ct));
+			}
+		}
+		for (e in blockExprs)
+		{
+			forExpr.push(e);
+		}
+
+		return macro {
+			if ($e{ _family }.has($e{ _entity }))
+			{
+				@:mergeBlock $b{ forExpr }
+			}
+		};
+	}
+
+	/**
 	 * Returns the table variable for a specific component type.
 	 * This should not be used outside of a system.
 	 * If the provided type is not used as a component in any of the systems families the behaviour is undefined.
@@ -220,6 +283,8 @@ using Safety;
 	 */
 	macro function table(_this : Expr, _type : ExprOf<TableType>)
 	{
+		Context.warning('table is unsafe and will be removed in a future version, use fetch instead', Context.currentPos());
+
 		return switch _type.expr
 		{
 			case EConst(CIdent(s)):

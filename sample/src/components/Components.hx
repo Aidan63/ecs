@@ -1,27 +1,18 @@
 package components;
 
-class Position
+class Point
 {
     public var x : Float;
 
     public var y : Float;
 
-    public function new()
-    {
-        x = 0;
-        y = 0;
-    }
-}
-
-class Velocity
-{
-    public var x : Float;
-
-    public var y : Float;
-
-    public function new(_x, _y)
+    public function new(_x = 0, _y = 0)
     {
         x = _x;
         y = _y;
     }
 }
+
+typedef Position = Point;
+
+typedef Velocity = Point;

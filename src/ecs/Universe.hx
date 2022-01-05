@@ -164,8 +164,18 @@ class Universe
                                 }
                             }
                     }
+                // We need to handle ENew separately as Context.typeof won't give typedef as a type.
+                case ENew(_.name => name, _):
+                    final resolved  = try Context.getType(name) catch (e) Context.error('Unable to get the type of ${ component.toString() } : $e', component.pos);
+                    final signature = signature(resolved);
+
+                    switch getComponentID(signature)
+                    {
+                        case Some(id): insert(id, component);
+                        case None: Context.warning('Component ${ resolved } is not used in any families', component.pos);
+                    }
                 case _:
-                    final resolved  = try Context.typeof(component) catch (_) Context.error('Unable to get the type of ${ component.toString() }', component.pos);
+                    final resolved  = try Context.typeof(component) catch (e) Context.error('Unable to get the type of ${ component.toString() } : $e', component.pos);
                     final signature = signature(resolved);
 
                     switch getComponentID(signature)

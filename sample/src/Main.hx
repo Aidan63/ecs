@@ -7,7 +7,7 @@ function main()
 {
     final universe = new Universe(1024);
     final object   = universe.createEntity();
-    
+
     universe.setSystems(VelocitySystem);
     universe.setComponents(object,
         Position,

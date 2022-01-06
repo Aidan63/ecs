@@ -264,8 +264,6 @@ class Universe
             u;
         }
 
-        trace(new haxe.macro.Printer().printExpr(o));
-
         return o;
     }
 
@@ -351,18 +349,14 @@ class Universe
      */
     public macro function setComponents(self : Expr, _entity : Expr, _components : Array<Expr>)
     {
-        final staticLoading = haxe.macro.Context.defined('ecs.static_loading');
-        final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
-        final added         = new Set();
-        final insert        = (id, compExpr) -> {
+        final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+        final added  = new Set();
+        final insert = (id, compExpr) -> {
             exprs.push(macro $e{ self }.components.set(_ecsTmpEntity, $v{ id }, $e{ compExpr }));
     
-            if (staticLoading)
+            for (familyID in ecs.macros.FamilyCache.getFamilyIDsWithComponent(id))
             {
-                for (familyID in ecs.macros.FamilyCache.getFamilyIDsWithComponent(id))
-                {
-                    added.add(familyID);
-                }
+                added.add(familyID);
             }
         }
     
@@ -374,42 +368,24 @@ class Universe
                     switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                     {
                         case Some(type):
-                            if (staticLoading)
+                            switch getComponentID(signature(type))
                             {
-                                switch getComponentID(signature(type))
-                                {
-                                    case Some(id): insert(id, component);
-                                    case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
-                                }
-                            }
-                            else
-                            {
-                                insert(registerComponent(signature(type), type), component);
+                                case Some(id): insert(id, component);
+                                case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
                             }
                         case None:
                             final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
                             final signature = signature(resolved);
     
-                            if (staticLoading)
+                            switch getComponentID(signature)
                             {
-                                switch getComponentID(signature)
-                                {
-                                    case Some(id):
-                                        switch resolved.toComplexType()
-                                        {
-                                            case TPath(tp): insert(id, macro new $tp());
-                                            case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
-                                        }
-                                    case None: Context.warning('Component $resolved is not used in any families', component.pos);
-                                }
-                            }
-                            else
-                            {
-                                switch resolved.toComplexType()
-                                {
-                                    case TPath(tp): insert(registerComponent(signature, resolved), macro new $tp());
-                                    case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
-                                }
+                                case Some(id):
+                                    switch resolved.toComplexType()
+                                    {
+                                        case TPath(tp): insert(id, macro new $tp());
+                                        case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
+                                    }
+                                case None: Context.warning('Component $resolved is not used in any families', component.pos);
                             }
                     }
                 // We need to handle ENew separately as Context.typeof won't give typedef as a type.
@@ -436,27 +412,14 @@ class Universe
     
         // After all `set` functions are called check each family which could have been modified by the components added.
         exprs.push(macro final ecsEntCompFlags = $e{ self }.components.flags[_ecsTmpEntity.id()]);
-        if (staticLoading)
+
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
         {
-            // With static loaded the `added` set contains all families which could have been effected by the components added.
-            // So we only need to check those ones.
-            for (familyID in added)
-            {
-                exprs.push(macro final ecsTmpFamily = $e{ self }.families.get($v{ familyID }));
-                exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                });
-            }
-        }
-        else
-        {
-            // With dynamic loaded we have no choice but to check all families.
-            exprs.push(macro for (i in 0...$e{ self }.families.number) {
-                final ecsTmpFamily = $e{ self }.families.get(i);
-                if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
-                {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                }
+            exprs.push(macro final ecsTmpFamily = $e{ self }.families.get($v{ familyID }));
+            exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.add(_ecsTmpEntity);
             });
         }
     
@@ -481,18 +444,14 @@ class Universe
      */
     public macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
-        final added         = new Set();
-        final insert        = id -> {
+        final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+        final added  = new Set();
+        final insert = id -> {
             exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
-    
-            if (staticLoading)
+
+            for (familyID in getFamilyIDsWithComponent(id))
             {
-                for (familyID in getFamilyIDsWithComponent(id))
-                {
-                    added.add(familyID);
-                }
+                added.add(familyID);
             }
         };
     
@@ -525,27 +484,14 @@ class Universe
     
         // After all `remove` functions are called check each family which could have been modified by the components removed.
         exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
-        if (staticLoading)
+
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
         {
-            // With static loaded the `added` set contains all families which could have been effected by the components added.
-            // So we only need to check those ones.
-            for (familyID in added)
-            {
-                exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
-                exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-                    ecsTmpFamily.remove(_ecsTmpEntity);
-                });
-            }
-        }
-        else
-        {
-            // With dynamic loaded we have no choice but to check all families.
-            exprs.push(macro for (i in 0...$e{ _universe }.families.number) {
-                final ecsTmpFamily = $e{ _universe }.families.get(i);
-                if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
-                {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                }
+            exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+            exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.remove(_ecsTmpEntity);
             });
         }
     
@@ -587,18 +533,14 @@ class Universe
      */
     public macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [];
-        final added         = new Set();
-        final insert        = (id, resExpr) -> {
+        final exprs  = [];
+        final added  = new Set();
+        final insert = (id, resExpr) -> {
             exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resExpr }));
     
-            if (staticLoading)
+            for (familyID in getFamilyIDsWithResource(id))
             {
-                for (familyID in getFamilyIDsWithResource(id))
-                {
-                    added.add(familyID);
-                }   
+                added.add(familyID);
             }
         };
     
@@ -632,18 +574,9 @@ class Universe
         }
     
         // Add a call to try and activate each families which requested the resources.
-        // If we are not dynamically loading we can reduced the number of families we try and activate
-        // When dynamically loading we have no choice by to try and load each family.
-        if (staticLoading)
+        for (familyID in added)
         {
-            for (familyID in added)
-            {
-                exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
-            }
-        }
-        else
-        {
-            exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryActivate(i));
+            exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
         }
     
         return macro $b{ exprs };
@@ -666,18 +599,14 @@ class Universe
      */
     public macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [];
-        final adder         = new Set();
-        final insert        = id -> {
+        final exprs  = [];
+        final adder  = new Set();
+        final insert = id -> {
             adder.add(id);
     
-            if (staticLoading)
+            for (familyID in getFamilyIDsWithResource(id))
             {
-                for (familyID in getFamilyIDsWithResource(id))
-                {
-                    exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
-                }
+                exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
             }
         };
     
@@ -717,143 +646,9 @@ class Universe
         // Remove the resources once each family has been deactivated
         for (resourceID in adder)
         {
-            if (!staticLoading)
-            {
-                exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i, $v{ resourceID }));
-            }
+            exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i, $v{ resourceID }));
     
             exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
-        }
-    
-        return macro $b{ exprs };
-    }
-    
-    /**
-     * Add any number of systems to be ran by the provided universe.
-     * The final argument is a rest argument meaning it can take in any number of arguments.
-     * 
-     * Example usage for `using ecs.macros.UniverseMacros;`
-     * 
-     * ```
-     * unverse.setSystems(
-     *     new VelocitySystem(),
-     *     new SpriteDrawingSystem());
-     * ```
-     * 
-     * Along with the usual variable, function, and constructor expressions if the system does not have a custom
-     * constructor you can provide just the type and it will be constructed for you.
-     * 
-     * ```
-     * universe.setSystems(
-     *     new VelocitySystem(),
-     *     SpriteDrawingSystem);
-     * ```
-     * 
-     * Systems are updated in the order they were added, and adding the same system to the universe twice will cause it
-     * to be updated twice on every universe update.
-     * @param _universe Universe to add systems to.
-     * @param _systems Systems to add.
-     */
-    public macro function setSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
-    {
-#if (ecs.static_loading && !ecs.no_wildcard_warning)
-        // Using wildcard imports to access systems can break things! Wildcard imports are lazily imported, so if the universe it typed before
-        // a system it will never know about it.
-        // This is a simple check to see if we have any wildcard imports or usings, and warn the user if we do.
-
-        for (imp in Context.getLocalImports().filter(i -> i.mode.match(IAll)))
-        {
-            final path = imp.path[0].pos.getInfos().file;
-            final min  = 0;
-            final max  = {
-                var v = 0;
-
-                for (p in imp.path)
-                {
-                    final posMax = p.pos.getInfos().max;
-
-                    if (posMax > v)
-                    {
-                        v = posMax;
-                    }
-                }
-
-                v;
-            }
-
-            Context.warning(
-                '[ecs] Wildcard import detected. Please ensure you are not wildcard importing systems as they are lazily imported and will break at runtime',
-                Context.makePosition({ min : min, max : max, file : path }));
-        }
-#end
-
-        final exprs = [];
-    
-        for (system in _systems)
-        {
-            switch system.expr
-            {
-                case EConst(CIdent(s)):
-                    // Systems don't have unique IDs so we pass a function which will always return 0.
-                    // This way we can still use the same resolution logic
-                    switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
-                    {
-                        case Some(_):
-                            exprs.push(macro $e{ _universe }.systems.add($e{ system }));
-                        case None:
-                            final resolved = try Context.getType(s) catch (_) Context.error('Unable to get type of system expression ${ system.toString() }', system.pos);
-
-                            switch resolved.toComplexType()
-                            {
-                                case TPath(tp): exprs.push(macro $e{ _universe }.systems.add(new $tp($e{ _universe })));
-                                case other: Context.error('System $other should be TPath', system.pos);
-                            }
-                    }
-                case ENew(tp, _):
-                    exprs.push(macro $e{ _universe }.systems.add($e{ system }));
-                case _:
-                    Context.error('Unsupported system expression ${ system }', system.pos);
-            }
-        }
-    
-        return macro $b{ exprs };
-    }
-    
-    /**
-     * Remove any number of systems from the provided universe.
-     * The final argument is a rest argument meaning it can take in any number of arguments.
-     * 
-     * Example usage for `using ecs.macros.UniverseMacros;`
-     * 
-     * ```
-     * unverse.removeSystems(
-     *     someField,
-     *     functionWhichReturnsSomeSystem());
-     * ```
-     * 
-     * The system expressions must refer to a system object, as currently systems do not have a unique ID.
-     * 
-     * @param _universe Universe to remove systems from.
-     * @param _systems fields pointing to system objects to remove.
-     */
-    public macro function removeSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
-    {
-        final exprs = [];
-    
-        for (system in _systems)
-        {
-            switch system.expr
-            {
-                case EConst(CIdent(s)):
-                    switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
-                    {
-                        case Some(_):
-                            exprs.push(macro $e{ _universe }.systems.remove($e{ system }));
-                        case None:
-                            Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
-                    }
-                case _: Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
-            }
         }
     
         return macro $b{ exprs };

@@ -325,12 +325,6 @@ All components and resources requested by a family are guarenteed to still be ac
 
 ### Defines
 
-#### ecs.static_loading
-
-By default run time type information is used to store data about all possible components, families, resources, etc. This is then read at universe creation and used to pre-allocate arrays of the correct size. With the `ecs.static_loading` define you can opt out of this loading technique and use one which is entirely macro based. This has some caveats though, static loading is dependant on the compilers parsing order which means if all possible systems haven't yet been parsed by the time the universe constructor is parsed those systems will never been known about and will cause run time crashes.
-
-To use static loading ensure all of your systems are explicitly imported into the class (no wildcard imports or import.hx files) which is constructing the universe.
-
 #### ecs.invalidationFile
 
 For better compatibility with the haxe compilation server a file is used which allows systems to trigger the core ecs classes for wiping from the compilation cache. By default the folder of the output file is used. The compilation server does not define an output file so the invalidation file is placed in the projects root folder.

@@ -11,21 +11,37 @@ class SystemTests extends BuddySuite
         describe('System Tests', {
             describe('Regressions', {
                 it('can use types with parameters in family definitions (#4)', {
-                    final universe = new Universe(8);
-                    final system   = new Issue4System(universe);
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ Issue4System ]
+                            }
+                        ]
+                    });
+
+                    final system   = (cast universe.phases[0].systems[0] : Issue4System);
                     final expected = [ 'hello', 'world!' ];
 
-                    universe.setSystems(system);
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
                     universe.update(0);
 
                     system.data.should.containExactly(expected);
                 });
                 it('will properly initialise systems with multiple inheritence levels', {
-                    final universe = new Universe(8);
-                    final system   = new ExtendedSystem(universe);
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ ExtendedSystem ]
+                            }
+                        ]
+                    });
 
-                    universe.setSystems(system);
+                    final system = (cast universe.phases[0].systems[0] : ExtendedSystem);
+
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
                     universe.update(0);
 
@@ -33,11 +49,19 @@ class SystemTests extends BuddySuite
                 });
             });
             describe('fetching', {
-                final universe = new Universe(8);
-                final system   = new FetchingSystem(universe);
+                final universe = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ FetchingSystem ]
+                        }
+                    ]
+                });
+
+                final system   = (cast universe.phases[0].systems[0] : FetchingSystem);
                 final expected = 7;
 
-                universe.setSystems(system);
                 universe.setComponents(universe.createEntity(), expected);
 
                 it('allows safe access to a specific entities components if its in a family', {

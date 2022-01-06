@@ -260,7 +260,7 @@ class Universe
 
                                     phase.systems.set($v{ j }, s);
 
-                                    s.onAdded();
+                                    $e{ if (system.enabled) macro s.onAdded(); else macro null }
                                 };
                             }
                         ] }

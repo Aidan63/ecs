@@ -85,11 +85,8 @@ class FamilyDefinition
 
 macro function familyConstruction() : Array<Field>
 {
-    final fields = Context.getBuildFields();
-    final output = [];
-
-    final added    = getOrCreateOverrideFunction('onAdded', fields, Context.currentPos());
-    final removed  = getOrCreateOverrideFunction('onRemoved', fields, Context.currentPos());
+    final fields   = Context.getBuildFields();
+    final output   = [];
     final families = new Array<FamilyDefinition>();
 
 #if display
@@ -164,100 +161,67 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
-    // Insert super calls into the onAdded and onRemoved events to ensure extended systems are properly setup
-    final baseIdx = 1;
-    insertExprIntoFunction(0, added, macro super.onAdded());
-    insertExprIntoFunction(0, removed, macro super.onRemoved());
-
-    // First pass over the extracted families we define a new family field in the system for that type.
-    // We also add a call to get that family from the world at the top of the `onAdded` function.
-    for (idx => family in families)
+    switch fields.find(f -> f.name == 'new')
     {
-        output.push({
-            name : family.name,
-            pos  : family.pos,
-            kind : FVar(macro : ecs.Family)
-        });
+        case null:
+            output.push({
+                name   : 'new',
+                pos    : Context.currentPos(),
+                access : [ APublic ],
+                kind   : FFun({
+                    args: [ { name: '_universe', type: macro : ecs.Universe } ],
+                    expr: macro {
+                        super(_universe);
 
-        family.components.sort(sortFields);
-        family.resources.sort(sortFields);
+                        $b{ [
+                            // First pass over the extracted families we define a new family field in the system for that type.
+                            // We also add a call to get that family from the world at the top of the `onAdded` function.
+                            for (idx => family in families)
+                            {
+                                output.push({
+                                    name   : family.name,
+                                    pos    : family.pos,
+                                    access : [ AFinal ],
+                                    kind   : FVar(macro : ecs.Family)
+                                });
+                        
+                                family.components.sort(sortFields);
+                                family.resources.sort(sortFields);
+                        
+                                // Insert out `family.get` calls at the very top of the `onAdded` function.
+                                // This we we can always access them in a overridden `onAdded`.
+                        
+                                final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
+                        
+                                macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) });
+                            }
+                        ] }
 
-        // Insert out `family.get` calls at the very top of the `onAdded` function.
-        // This we we can always access them in a overridden `onAdded`.
+                        $b{ [
+                            // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
+                            for (idx => component in getUniqueComponents(families))
+                            {
+                                final ct   = component.type.toComplexType();
+                                final name = 'table${ component.hash }';
 
-        final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
+                                output.push({
+                                    name   : name,
+                                    pos    : Context.currentPos(),
+                                    access : [ AFinal ],
+                                    kind   : FVar(macro : ecs.Components<$ct>),
+                                });
 
-        insertExprIntoFunction(baseIdx + idx, added, macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) }));
-    }
-
-    // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
-    for (idx => component in getUniqueComponents(families))
-    {
-        final ct   = component.type.toComplexType();
-        final name = 'table${ component.hash }';
-
-        output.push({
-            name : name,
-            pos  : Context.currentPos(),
-            kind : FVar(macro : ecs.Components<$ct>),
-        });
-
-        // Inserting at `families.length + idx` ensures all out `getTable` calls happen after the families are fetched.
-        insertExprIntoFunction(
-            baseIdx + families.length + idx,
-            added,
-            macro $i{ name } = cast universe.components.getTable($v{ component.uID }));
-    }
+                                macro $i{ name } = cast universe.components.getTable($v{ component.uID });
+                            }
+                        ] }
+                    }
+                })
+            });
+        case existing:
+            Context.error('User defined systems do not currently support custom constructors', existing.pos);
+    }   
 
     return output;
-}
-
-/**
- * Search the array of fields for one with a name that matches the provided string.
- * If no matching field is found a public override field with that name is appended to the field array.
- * @param _name Name to search for / create if not found.
- * @param _fields Existing fields.
- * @param _pos Context.currentPos()
- * @return Either the found field or the newly creatd one.
- */
-private function getOrCreateOverrideFunction(_name : String, _fields : Array<Field>, _pos : Position)
-{
-    for (field in _fields)
-    {
-        if (field.name == _name)
-        {
-            return field;
-        }
-    }
-
-    _fields.push({
-        name   : _name,
-        access : [ APublic, AOverride ],
-        pos    : _pos,
-        kind   : FFun({ args : [], expr : macro {} })
-    });
-
-    return _fields[_fields.length - 1];
-}
-
-/**
- * Inserts an expression into a function block field.
- * @param _pos Position within the existing expression array to insert at.
- * @param _field Field to insert in, must be a FFun EBlock field.
- * @param _expr Expression to insert.
- */
-private function insertExprIntoFunction(_pos : Int, _field : Field, _expr : Expr)
-{
-    switch _field.kind
-    {
-        case FFun(f):
-            switch f.expr.expr
-            {
-                case EBlock(exprs): exprs.insert(_pos, _expr);
-                case _:
-            }
-        case _:
-    }
 }
 
 /**

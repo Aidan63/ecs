@@ -23,13 +23,29 @@ using Lambda;
 using EnumValue;
 using haxe.macro.Tools;
 
+private class SystemSpec
+{
+    public final type : Type;
+
+    public final pos : Position;
+
+    public final enabled : Bool;
+
+    public function new(_type, _pos, _enabled)
+    {
+        type    = _type;
+        pos     = _pos;
+        enabled = _enabled;
+    }
+}
+
 private class PhaseSpec
 {
     public final name : String;
 
     public final enabled : Bool;
 
-    public final systems : Array<Type>;
+    public final systems : Array<SystemSpec>;
 
     public function new(_name, _enabled, _systems)
     {
@@ -64,7 +80,9 @@ class Universe
             return switch e.expr
             {
                 case EConst(CIdent(i)):
-                    try Context.getType(i) catch (exn) Context.error('Failed to get the type of "$i" : $exn', e.pos);
+                    final t = try Context.getType(i) catch (exn) Context.error('Failed to get the type of "$i" : $exn', e.pos);
+
+                    return new SystemSpec(t, e.pos, true);
                 case other:
                     Context.error('System is not an identifier : $other', e.pos);
             }
@@ -176,7 +194,14 @@ class Universe
                 $b{ [
                     for (idx => phase in spec.phases)
                     {
-                        macro vec.set($v{ idx }, new ecs.Phase($v{ phase.name }, new haxe.ds.Vector($v{ phase.systems.length })));
+                        macro vec.set(
+                            $v{ idx },
+                            new ecs.Phase(
+                                $v{ phase.enabled },
+                                $v{ phase.name },
+                                new haxe.ds.Vector($v{ phase.systems.length }),
+                                new haxe.ds.Vector($v{ phase.systems.length }))
+                        );
                     }
                 ] }
 
@@ -244,21 +269,22 @@ class Universe
                         final phase = phases.get($v{ i });
 
                         $b{ [
-                            for (j => type in phase.systems)
+                            for (j => system in phase.systems)
                             {
-                                final tp = switch type
+                                final tp = switch system.type
                                 {
                                     case TInst(_.get() => cType, params):
                                         @:privateAccess haxe.macro.TypeTools.toTypePath(cType, params);
                                     case other:
                                         // TODO : Keep the pos of the type so we can report the error at the right location.
-                                        Context.error('Expected system to be an instance : $other', Context.currentPos());
+                                        Context.error('Expected system to be an instance : $other', system.pos);
                                 }
 
                                 macro {
                                     final s = new $tp(u);
 
-                                    phase.systems.set($v{ j }, s);
+                                    @:privateAccess phase.systems.set($v{ j }, s);
+                                    @:privateAccess phase.enabledSystems.set($v{ j }, $v{ system.enabled });
 
                                     $e{ if (system.enabled) macro s.onAdded(); else macro null }
                                 };

@@ -79,11 +79,6 @@ macro function inject()
     {
         sys.FileSystem.createDirectory(Path.directory(file));
     }
-
-    Context.registerModuleDependency('ecs.Universe', file);
-    Context.registerModuleDependency('ecs.core.ComponentManager', file);
-    Context.registerModuleDependency('ecs.core.ResourceManager', file);
-    Context.registerModuleDependency('ecs.core.FamilyManager', file);
     
 #if (debug && !ecs.no_debug_output)
     Sys.println('[ecs] Set invalidation file to $file');

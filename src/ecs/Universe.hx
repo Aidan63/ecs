@@ -159,8 +159,14 @@ class Universe
                 Context.error('Universe definition must be an object declaration', _spec.pos);
         }
 
-        // Create Universe
-        final o = macro {
+#if display
+        // Register a dependency to the calling module and the invalidation file
+        // This means the compiler will invalidate the module whenever the file changes
+
+        Context.registerModuleDependency(Context.getLocalModule(), invalidationFile);
+#end
+
+        return macro {
             // pre-allocate the phases and reserve a vector to contain all a phases systems.
             // Do not allocate the phases right now, they need a reference to the universe so we defer that til afterwards.
             final phases = {
@@ -263,8 +269,6 @@ class Universe
 
             u;
         }
-
-        return o;
     }
 
     public final entities : EntityManager;

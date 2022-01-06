@@ -1,8 +1,7 @@
 package systems;
 
 import ecs.System;
-import components.Components.Position;
-import components.Components.Velocity;
+import components.*;
 
 class VelocitySystem extends System
 {

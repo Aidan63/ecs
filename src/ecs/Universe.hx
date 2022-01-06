@@ -1,47 +1,295 @@
 package ecs;
 
-import ecs.ds.Set;
+import haxe.ds.Vector;
 import ecs.core.EntityManager;
 import ecs.core.FamilyManager;
-import ecs.core.SystemManager;
 import ecs.core.ResourceManager;
 import ecs.core.ComponentManager;
 
 #if macro
-import haxe.macro.Expr;
-import haxe.macro.Context;
+import ecs.ds.Set;
 import ecs.macros.Utils;
 import ecs.macros.UniverseMacros;
 import ecs.macros.ComponentCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.FamilyCache;
+import haxe.macro.Type;
+import haxe.macro.Expr;
+import haxe.macro.Context;
 
+using Safety;
 using Lambda;
 using EnumValue;
 using haxe.macro.Tools;
-#end
 
+private class PhaseSpec
+{
+    public final name : String;
+
+    public final enabled : Bool;
+
+    public final systems : Array<Type>;
+
+    public function new(_name, _enabled, _systems)
+    {
+        name    = _name;
+        enabled = _enabled;
+        systems = _systems;
+    }
+}
+
+private class UniverseSpec
+{
+    public final name : String;
+
+    public final entities : Int;
+
+    public final phases : Array<PhaseSpec>;
+
+    public function new(_name, _entities, _phases)
+    {
+        name     = _name;
+        entities = _entities;
+        phases   = _phases;
+    }
+}
+#end
 
 class Universe
 {
+    public static macro function create(_spec : Expr)
+    {
+        final registerSystem = (e : Expr) -> {
+            return switch e.expr
+            {
+                case EConst(CIdent(i)):
+                    try Context.getType(i) catch (exn) Context.error('Failed to get the type of "$i" : $exn', e.pos);
+                case other:
+                    Context.error('System is not an identifier : $other', e.pos);
+            }
+        }
+
+        final extractPhase = (e : Expr) -> {
+            return switch e.expr
+            {
+                case EObjectDecl(fields):
+                    final name = switch fields.find(i -> i.field == 'name')
+                    {
+                        case null:
+                            Context.error('Phase does not contain a field called "name"', e.pos);
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EConst(CString(v)): v;
+                                case _: Context.error('field called "name" was not a string literal', field.expr.pos);
+                            }
+                    }
+                    final enabled = switch fields.find(i -> i.field == 'enabled')
+                    {
+                        case null:
+                            true;
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EConst(CIdent('true')): true;
+                                case EConst(CIdent('false')): false;
+                                case _: Context.error('field called "enabled" was not a boolean literal', field.expr.pos);
+                            }
+                    }
+                    final systems = switch fields.find(i -> i.field == 'systems')
+                    {
+                        case null:
+                            Context.error('Phase does not contain a field called "systems"', e.pos);
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EArrayDecl(values):
+                                    values.map(registerSystem);
+                                case _:
+                                    Context.error('field called "systems" was not an array declaration', field.expr.pos);
+                            }
+                    }
+
+                    new PhaseSpec(name, enabled, systems);
+                case _:
+                    Context.error('Phase definition must be an object declaration', e.pos);
+            }
+        }
+
+        final spec = switch _spec.expr
+        {
+            case EObjectDecl(fields):
+                final name = switch fields.find(i -> i.field == 'name')
+                {
+                    case null:
+                        'universe';
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EConst(CString(v)): v;
+                            case _: Context.error('field called "name" was not a string literal', field.expr.pos);
+                        }
+                }
+                final capacity = switch fields.find(i -> i.field == 'entities')
+                {
+                    case null:
+                        Context.error('Object has no field with the name "entities"', _spec.pos);
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EConst(CInt(v)): Std.parseInt(v);
+                            case _: Context.error('field called "entities" was not an integer literal', field.expr.pos);
+                        }
+                }
+                final phases = switch fields.find(i -> i.field == 'phases')
+                {
+                    case null:
+                        Context.error('Object has no field with the name "phases"', _spec.pos);
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EArrayDecl(values):
+                                values.map(extractPhase);
+                            case _: Context.error('field called "phases" was not an array declaratioon', field.expr.pos);
+                        }
+                }
+
+                new UniverseSpec(name, capacity, phases);
+            case _:
+                Context.error('Universe definition must be an object declaration', _spec.pos);
+        }
+
+        // Create Universe
+        final o = macro {
+            // pre-allocate the phases and reserve a vector to contain all a phases systems.
+            // Do not allocate the phases right now, they need a reference to the universe so we defer that til afterwards.
+            final phases = {
+                final vec = new haxe.ds.Vector($v{ spec.phases.length });
+
+                $b{ [
+                    for (idx => phase in spec.phases)
+                    {
+                        macro vec.set($v{ idx }, new ecs.Phase($v{ phase.name }, new haxe.ds.Vector($v{ phase.systems.length })));
+                    }
+                ] }
+
+                vec;
+            }
+
+            final entities = new ecs.core.EntityManager($v{ spec.entities });
+            final components = {
+                final vec = new haxe.ds.Vector<Any>($v{ getComponentCount() });
+    
+                $b{
+                    [
+                        for (_ => value in getComponentMap())
+                        {
+                            final ct = value.type.toComplexType();
+            
+                            macro vec.set($v{ value.id }, new ecs.Components<$ct>($v{ getComponentCount() }));
+                        }
+                    ]
+                }
+
+                new ecs.core.ComponentManager(entities, vec);
+            }
+            final resources = new ecs.core.ResourceManager(new bits.Bits($v{ getResourceCount() }), new haxe.ds.Vector($v{ getResourceCount() }));
+            final families = {
+                final vec = new haxe.ds.Vector($v{ getFamilyCount() });
+
+                $b{ [
+                    for (idx => family in getFamilies())
+                    {
+                        macro {
+                            final cmpBits = new bits.Bits($v{ getComponentCount() });
+    
+                            $b{ [
+                                for (field in family.components)
+                                {
+                                    macro cmpBits.set($v{ field.uID });
+                                }
+                            ] }
+    
+                            final resBits = new bits.Bits($v{ getResourceCount() });
+    
+                            $b{ [
+                                for (field in family.resources)
+                                {
+                                    macro resBits.set($v{ field.uID });
+                                }
+                            ] }
+    
+                            vec.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits, $v{ spec.entities }));
+                        }
+                    }
+                ] }
+
+                new ecs.core.FamilyManager(components, resources, vec);
+            }
+
+            final u = new ecs.Universe(entities, components, resources, families, phases);
+
+            // Second iteration over phases, now we allocate all our systems.
+            $b{ [
+                for (i => phase in spec.phases)
+                {
+                    macro {
+                        final phase = phases.get($v{ i });
+
+                        $b{ [
+                            for (j => type in phase.systems)
+                            {
+                                final tp = switch type
+                                {
+                                    case TInst(_.get() => cType, params):
+                                        @:privateAccess haxe.macro.TypeTools.toTypePath(cType, params);
+                                    case other:
+                                        // TODO : Keep the pos of the type so we can report the error at the right location.
+                                        Context.error('Expected system to be an instance : $other', Context.currentPos());
+                                }
+
+                                macro {
+                                    final s = new $tp(u);
+
+                                    phase.systems.set($v{ j }, s);
+
+                                    s.onAdded();
+                                };
+                            }
+                        ] }
+                    }
+                }
+            ] }
+
+            u;
+        }
+
+        trace(new haxe.macro.Printer().printExpr(o));
+
+        return o;
+    }
+
     public final entities : EntityManager;
     public final components : ComponentManager;
     public final resources : ResourceManager;
     public final families : FamilyManager;
-    public final systems : SystemManager;
+    public final phases : Vector<Phase>;
 
-    public function new(_maxEntities)
+    public function new(_entities, _components, _resources, _families, _phases)
     {
-        entities   = new EntityManager(_maxEntities);
-        components = new ComponentManager(entities);
-        resources  = new ResourceManager();
-        families   = new FamilyManager(components, resources, _maxEntities);
-        systems    = new SystemManager();
+        entities   = _entities;
+        components = _components;
+        resources  = _resources;
+        families   = _families;
+        phases     = _phases;
     }
 
     public function update(_dt : Float)
     {
-        systems.update(_dt);
+        for (phase in phases)
+        {
+            phase.update(_dt);
+        }
     }
 
     /**

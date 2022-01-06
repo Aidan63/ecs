@@ -1,5 +1,6 @@
 package ecs;
 
+import haxe.Exception;
 import haxe.ds.Vector;
 
 class Phase
@@ -20,5 +21,21 @@ class Phase
         {
             system.update(_dt);
         }
+    }
+
+    @:generic public function getSystem<T : System>(_type : Class<T>)
+    {
+        for (system in systems)
+        {
+            switch Std.downcast(system, _type)
+            {
+                case null:
+                    continue;
+                case casted:
+                    return casted;
+            }
+        }
+
+        throw new Exception('Unable to find system with the specified type');
     }
 }

@@ -21,7 +21,7 @@ class SystemTests extends BuddySuite
                         ]
                     });
 
-                    final system   = (cast universe.phases[0].systems[0] : Issue4System);
+                    final system   = universe.getPhase('phase').getSystem(Issue4System);
                     final expected = [ 'hello', 'world!' ];
 
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
@@ -40,7 +40,7 @@ class SystemTests extends BuddySuite
                         ]
                     });
 
-                    final system = (cast universe.phases[0].systems[0] : ExtendedSystem);
+                    final system = universe.getPhase('phase').getSystem(ExtendedSystem);
 
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
                     universe.update(0);
@@ -59,7 +59,7 @@ class SystemTests extends BuddySuite
                     ]
                 });
 
-                final system   = (cast universe.phases[0].systems[0] : FetchingSystem);
+                final system   = universe.getPhase('phase').getSystem(FetchingSystem);
                 final expected = 7;
 
                 universe.setComponents(universe.createEntity(), expected);

@@ -47,7 +47,7 @@ class FamilyManagerTests extends BuddySuite
                         }
                     ]
                 });
-                final system = (cast world.phases[0].systems[0] : TestSystem);
+                final system = world.getPhase('phase').getSystem(TestSystem);
 
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
@@ -73,7 +73,7 @@ class FamilyManagerTests extends BuddySuite
                         }
                     ]
                 });
-                final system = (cast world.phases[0].systems[0] : TestSystem);
+                final system = world.getPhase('phase').getSystem(TestSystem);
 
                 world.setResources(TestResource1, TestResource2);
                 
@@ -95,7 +95,7 @@ class FamilyManagerTests extends BuddySuite
                         }
                     ]
                 });
-                final system = (cast world.phases[0].systems[0] : TestResourceAccessSystem);
+                final system = world.getPhase('phase').getSystem(TestResourceAccessSystem);
 
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
@@ -115,7 +115,7 @@ class FamilyManagerTests extends BuddySuite
                         }
                     ]
                 });
-                final system = (cast world.phases[0].systems[0] : TestResourceAccessSystem);
+                final system = world.getPhase('phase').getSystem(TestResourceAccessSystem);
 
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
@@ -137,7 +137,7 @@ class FamilyManagerTests extends BuddySuite
                             }
                         ]
                     });
-                    final system = (cast world.phases[0].systems[0] : TestMultiFamilyResourceAccessSystem);
+                    final system = world.getPhase('phase').getSystem(TestMultiFamilyResourceAccessSystem);
     
                     world.setComponents(world.createEntity(), TestComponent1);
     

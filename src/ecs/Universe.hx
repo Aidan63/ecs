@@ -1,5 +1,6 @@
 package ecs;
 
+import haxe.Exception;
 import haxe.ds.Vector;
 import ecs.core.EntityManager;
 import ecs.core.FamilyManager;
@@ -313,6 +314,19 @@ class Universe
         components.clear(_entity);
         families.whenEntityDestroyed(_entity);
         entities.destroy(_entity.id());
+    }
+
+    public function getPhase(_name)
+    {
+        for (phase in phases)
+        {
+            if (phase.name == _name)
+            {
+                return phase;
+            }
+        }
+
+        throw new Exception('Unable to find a phase with the name $_name');
     }
 
     /**

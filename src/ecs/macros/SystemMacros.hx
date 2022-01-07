@@ -208,7 +208,6 @@ macro function familyConstruction() : Array<Field>
     switch output.find(f -> f.name == 'new')
     {
         case null:
-            trace('no constructor');
             output.push({
                 name   : 'new',
                 pos    : Context.currentPos(),

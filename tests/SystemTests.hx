@@ -68,6 +68,32 @@ class SystemTests extends BuddySuite
                     system.number.should.be(expected);
                 });
             });
+            describe('constructors', {
+                it('can inject family and table setup code into custom empty constructors', {
+                    Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ CustomConstructorFamily ]
+                            }
+                        ]
+                    });
+                });
+                it('can inject family and table setup code into constructors with user code', {
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ CustomConstructorCodeFamily ]
+                            }
+                        ]
+                    });
+
+                    universe.getPhase('phase').getSystem(CustomConstructorCodeFamily).myRes.should.be(true);
+                });
+            });
         });
     }
 }
@@ -109,5 +135,25 @@ class FetchingSystem extends System
                 number = num;
             });
         });
+    }
+}
+
+class CustomConstructorFamily extends FetchingSystem
+{
+    public function new(_universe)
+    {
+        super(_universe);
+    }
+}
+
+class CustomConstructorCodeFamily extends FetchingSystem
+{
+    public final myRes : Bool;
+
+    public function new(_universe)
+    {
+        super(_universe);
+
+        myRes = family.isActive();
     }
 }

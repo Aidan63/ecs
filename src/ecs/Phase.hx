@@ -84,6 +84,8 @@ class Phase
 
                         system.onAdded();
                     }
+
+                    return;
             }
         }
 
@@ -105,6 +107,8 @@ class Phase
 
                         system.onRemoved();
                     }
+
+                    return;
             }
         }
 

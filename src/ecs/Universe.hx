@@ -9,6 +9,7 @@ import ecs.core.ComponentManager;
 
 #if macro
 import ecs.ds.Set;
+import ecs.ds.Result;
 import ecs.macros.Utils;
 import ecs.macros.UniverseMacros;
 import ecs.macros.ComponentCache;
@@ -70,6 +71,20 @@ private class UniverseSpec
         phases   = _phases;
     }
 }
+
+private function buildTypePath(_existing : String, _expr : Expr) : Result<String, String>
+{
+    return switch _expr.expr
+    {
+        case EConst(CIdent(s)):
+            Ok('$s.$_existing');
+        case EField(e, field):
+            buildTypePath('$field.$_existing', e);
+        case other:
+            Error('unsupported expression in type path : $other');
+    }
+}
+
 #end
 
 class Universe
@@ -83,8 +98,18 @@ class Universe
                     final t = try Context.getType(i) catch (exn) Context.error('Failed to get the type of "$i" : $exn', e.pos);
 
                     return new SystemSpec(t, e.pos, true);
+                case EField(inner, field):
+                    switch buildTypePath(field, inner)
+                    {
+                        case Ok(path):
+                            final t = try Context.getType(path) catch (exn) Context.error('Failed to get the type of "$path" : $exn', e.pos);
+
+                            return new SystemSpec(t, e.pos, true);
+                        case Error(error):
+                            Context.error(error, e.pos);
+                    }
                 case other:
-                    Context.error('System is not an identifier : $other', e.pos);
+                    Context.error('Expression is not a valid type path : $other', e.pos);
             }
         }
 

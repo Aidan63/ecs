@@ -12,6 +12,32 @@ class PhaseTests extends BuddySuite
     public function new()
     {
         describe('Phase Tests', {
+            it('allows getting a system by type', {
+                final system  = new CountingSystem(null);
+                final systems = Vector.fromArrayCopy([ (system : System) ]);
+                final enabled = Vector.fromArrayCopy([ true ]);
+                final phase   = new Phase(true, '', systems, enabled);
+
+                phase.getSystem(CountingSystem).should.be(system);
+            });
+            it('will throw an exception if the system could not be found', {
+                final system  = new CountingSystem(null);
+                final systems = Vector.fromArrayCopy([ (system : System) ]);
+                final enabled = Vector.fromArrayCopy([ true ]);
+                final phase   = new Phase(true, '', systems, enabled);
+
+                try
+                {
+                    phase.getSystem(MyOtherSystem);
+
+                    fail('exception was not thrown');
+                }
+                catch (_)
+                {
+                    //
+                }
+            });
+
             describe('update', {
                 it('will update all enabled systems if enabled', {
                     final system  = new CountingSystem(null);

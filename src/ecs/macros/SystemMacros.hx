@@ -161,9 +161,54 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
-    switch fields.find(f -> f.name == 'new')
+    final assignment = macro {
+        @:mergeBlock $b{ [
+            // First pass over the extracted families we define a new family field in the system for that type.
+            // We also add a call to get that family from the world at the top of the `onAdded` function.
+            for (idx => family in families)
+            {
+                output.push({
+                    name   : family.name,
+                    pos    : family.pos,
+                    access : [ AFinal ],
+                    kind   : FVar(macro : ecs.Family)
+                });
+        
+                family.components.sort(sortFields);
+                family.resources.sort(sortFields);
+        
+                // Insert out `family.get` calls at the very top of the `onAdded` function.
+                // This we we can always access them in a overridden `onAdded`.
+        
+                final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
+        
+                macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) });
+            }
+        ] }
+
+        @:mergeBlock $b{ [
+            // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
+            for (idx => component in getUniqueComponents(families))
+            {
+                final ct   = component.type.toComplexType();
+                final name = 'table${ component.hash }';
+
+                output.push({
+                    name   : name,
+                    pos    : Context.currentPos(),
+                    access : [ AFinal ],
+                    kind   : FVar(macro : ecs.Components<$ct>),
+                });
+
+                macro $i{ name } = cast universe.components.getTable($v{ component.uID });
+            }
+        ] }
+    }
+
+    switch output.find(f -> f.name == 'new')
     {
         case null:
+            trace('no constructor');
             output.push({
                 name   : 'new',
                 pos    : Context.currentPos(),
@@ -173,52 +218,51 @@ macro function familyConstruction() : Array<Field>
                     expr: macro {
                         super(_universe);
 
-                        $b{ [
-                            // First pass over the extracted families we define a new family field in the system for that type.
-                            // We also add a call to get that family from the world at the top of the `onAdded` function.
-                            for (idx => family in families)
-                            {
-                                output.push({
-                                    name   : family.name,
-                                    pos    : family.pos,
-                                    access : [ AFinal ],
-                                    kind   : FVar(macro : ecs.Family)
-                                });
-                        
-                                family.components.sort(sortFields);
-                                family.resources.sort(sortFields);
-                        
-                                // Insert out `family.get` calls at the very top of the `onAdded` function.
-                                // This we we can always access them in a overridden `onAdded`.
-                        
-                                final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
-                        
-                                macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) });
-                            }
-                        ] }
-
-                        $b{ [
-                            // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
-                            for (idx => component in getUniqueComponents(families))
-                            {
-                                final ct   = component.type.toComplexType();
-                                final name = 'table${ component.hash }';
-
-                                output.push({
-                                    name   : name,
-                                    pos    : Context.currentPos(),
-                                    access : [ AFinal ],
-                                    kind   : FVar(macro : ecs.Components<$ct>),
-                                });
-
-                                macro $i{ name } = cast universe.components.getTable($v{ component.uID });
-                            }
-                        ] }
+                        @:mergeBlock $e{ assignment }
                     }
                 })
             });
         case existing:
-            Context.error('User defined systems do not currently support custom constructors', existing.pos);
+            switch existing.kind
+            {
+                case FFun({ expr : { expr : EBlock(exprs), pos : p } }):
+                    var injected = false;
+
+                    for (idx => expr in exprs)
+                    {
+                        switch expr.expr
+                        {
+                            case ECall(e, _):
+                                if (e.expr.match(EConst(CIdent('super'))))
+                                {
+                                    if (idx + 1 >= exprs.length)
+                                    {
+                                        exprs.push(assignment);
+                                    }
+                                    else
+                                    {
+                                        exprs.insert(idx + 1, assignment);
+                                    }
+
+                                    injected = true;
+                                }
+                            case _:
+                                //
+                        }
+
+                        if (injected)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (!injected)
+                    {
+                        Context.error('Failed to find constructor super call to inject family setup code', p);
+                    }
+                case other:
+                    Context.error('Expected constructor to be a function, found $other', existing.pos);
+            }
     }   
 
     return output;

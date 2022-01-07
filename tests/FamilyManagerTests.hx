@@ -10,11 +10,16 @@ class FamilyManagerTests extends BuddySuite
     {
         describe('FamilyManager Tests', {
             it('It will not iterate over a families entities if it does not have the requested resources', {
-                final world  = new Universe(8);
-                final system = new TestSystem(world);
                 final comp   = new TestComponent1();
-
-                world.setSystems(system);
+                final world  = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ TestSystem ]
+                        }
+                    ]
+                });
                 
                 world.setComponents(world.createEntity(), comp);
 
@@ -33,10 +38,17 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('will fire onEntityAdded events for each entity in a family when it gains all its required resources', {
-                final world  = new Universe(8);
-                final system = new TestSystem(world);
+                final world  = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ TestSystem ]
+                        }
+                    ]
+                });
+                final system = world.getPhase('phase').getSystem(TestSystem);
 
-                world.setSystems(system);
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
 
@@ -52,10 +64,17 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('will fire onEntityRemoved events for each entity in a family when it loses a required resource', {
-                final world  = new Universe(8);
-                final system = new TestSystem(world);
+                final world  = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ TestSystem ]
+                        }
+                    ]
+                });
+                final system = world.getPhase('phase').getSystem(TestSystem);
 
-                world.setSystems(system);
                 world.setResources(TestResource1, TestResource2);
                 
                 world.setComponents(world.createEntity(), TestComponent1);
@@ -67,10 +86,17 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('allows access to resources from onEntityAdded subscribers', {
-                final world  = new Universe(8);
-                final system = new TestResourceAccessSystem(world);
+                final world  = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ TestResourceAccessSystem ]
+                        }
+                    ]
+                });
+                final system = world.getPhase('phase').getSystem(TestResourceAccessSystem);
 
-                world.setSystems(system);
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
 
@@ -80,10 +106,17 @@ class FamilyManagerTests extends BuddySuite
             });
 
             it('allows access to resources from onEntityAdded subscribers', {
-                final world  = new Universe(8);
-                final system = new TestResourceAccessSystem(world);
+                final world  = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ TestResourceAccessSystem ]
+                        }
+                    ]
+                });
+                final system = world.getPhase('phase').getSystem(TestResourceAccessSystem);
 
-                world.setSystems(system);
                 world.setComponents(world.createEntity(), TestComponent1);
                 world.setComponents(world.createEntity(), TestComponent1);
 
@@ -95,10 +128,17 @@ class FamilyManagerTests extends BuddySuite
 
             describe('Regressions', {
                 it('will not deactivate all families when removing resources', {
-                    final world  = new Universe(8);
-                    final system = new TestMultiFamilyResourceAccessSystem(world);
+                    final world  = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ TestMultiFamilyResourceAccessSystem ]
+                            }
+                        ]
+                    });
+                    final system = world.getPhase('phase').getSystem(TestMultiFamilyResourceAccessSystem);
     
-                    world.setSystems(system);
                     world.setComponents(world.createEntity(), TestComponent1);
     
                     world.setResources(TestResource1);

@@ -11,21 +11,37 @@ class SystemTests extends BuddySuite
         describe('System Tests', {
             describe('Regressions', {
                 it('can use types with parameters in family definitions (#4)', {
-                    final universe = new Universe(8);
-                    final system   = new Issue4System(universe);
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ Issue4System ]
+                            }
+                        ]
+                    });
+
+                    final system   = universe.getPhase('phase').getSystem(Issue4System);
                     final expected = [ 'hello', 'world!' ];
 
-                    universe.setSystems(system);
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
                     universe.update(0);
 
                     system.data.should.containExactly(expected);
                 });
                 it('will properly initialise systems with multiple inheritence levels', {
-                    final universe = new Universe(8);
-                    final system   = new ExtendedSystem(universe);
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ ExtendedSystem ]
+                            }
+                        ]
+                    });
 
-                    universe.setSystems(system);
+                    final system = universe.getPhase('phase').getSystem(ExtendedSystem);
+
                     universe.setComponents(universe.createEntity(), [ 'hello', 'world!' ]);
                     universe.update(0);
 
@@ -33,15 +49,49 @@ class SystemTests extends BuddySuite
                 });
             });
             describe('fetching', {
-                final universe = new Universe(8);
-                final system   = new FetchingSystem(universe);
+                final universe = Universe.create({
+                    entities : 8,
+                    phases : [
+                        {
+                            name : 'phase',
+                            systems : [ FetchingSystem ]
+                        }
+                    ]
+                });
+
+                final system   = universe.getPhase('phase').getSystem(FetchingSystem);
                 final expected = 7;
 
-                universe.setSystems(system);
                 universe.setComponents(universe.createEntity(), expected);
 
                 it('allows safe access to a specific entities components if its in a family', {
                     system.number.should.be(expected);
+                });
+            });
+            describe('constructors', {
+                it('can inject family and table setup code into custom empty constructors', {
+                    Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ CustomConstructorFamily ]
+                            }
+                        ]
+                    });
+                });
+                it('can inject family and table setup code into constructors with user code', {
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ CustomConstructorCodeFamily ]
+                            }
+                        ]
+                    });
+
+                    universe.getPhase('phase').getSystem(CustomConstructorCodeFamily).myRes.should.be(true);
                 });
             });
         });
@@ -85,5 +135,25 @@ class FetchingSystem extends System
                 number = num;
             });
         });
+    }
+}
+
+class CustomConstructorFamily extends FetchingSystem
+{
+    public function new(_universe)
+    {
+        super(_universe);
+    }
+}
+
+class CustomConstructorCodeFamily extends FetchingSystem
+{
+    public final myRes : Bool;
+
+    public function new(_universe)
+    {
+        super(_universe);
+
+        myRes = family.isActive();
     }
 }

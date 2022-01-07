@@ -15,16 +15,10 @@ class ResourceManager
      */
     final resources : Vector<Any>;
 
-    public function new()
+    public function new(_flags, _resources)
     {
-#if ecs.static_loading
-        flags     = ecs.macros.ResourceMacros.createResourceBits();
-        resources = ecs.macros.ResourceMacros.createResourceVector();
-#else
-        final resourceCount = haxe.rtti.Meta.getType(ResourceManager).resourceCount[0];
-        flags     = new Bits(resourceCount);
-        resources = new Vector(resourceCount);
-#end
+        flags     = _flags;
+        resources = _resources;
     }
 
     /**

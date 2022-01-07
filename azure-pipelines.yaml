@@ -46,49 +46,25 @@ jobs:
         name: cpp
         hxml: test-cpp.hxml
         cmd: $(cpp)
-      'cpp-no-dyn':
-        name: cpp no dyn
-        hxml: test-cpp-no-dyn.hxml
-        cmd: $(cpp)
       'cppia':
         name: cppia
         hxml: test-cppia.hxml
-        cmd: $(cppia)
-      'cppia-no-dyn':
-        name: cppia no dyn
-        hxml: test-cppia-no-dyn.hxml
         cmd: $(cppia)
       'hl':
         name: hashlink
         hxml: test-hl.hxml
         cmd: $(hashlink)
-      'hl-no-dyn':
-        name: hashlink no dyn
-        hxml: test-hl-no-dyn.hxml
-        cmd: $(hashlink)
       'js':
         name: js
         hxml: test-js.hxml
-        cmd: $(js)
-      'js-no-dyn':
-        name: js no dyn
-        hxml: test-js-no-dyn.hxml
         cmd: $(js)
       'jvm':
         name: jvm
         hxml: test-jvm.hxml
         cmd: $(jvm)
-      'jvm-no-dyn':
-        name: jvm no dyn
-        hxml: test-jvm-no-dyn.hxml
-        cmd: $(jvm)
       'interp':
         name: interp
         hxml: test-interp.hxml
-        cmd: $(interp)
-      'interp-no-dyn':
-        name: interp no dyn
-        hxml: test-interp-no-dyn.hxml
         cmd: $(interp)
   pool:
     vmImage: 'ubuntu-latest'
@@ -115,12 +91,6 @@ jobs:
       displayName: Coverage
 
 - job: run_sample
-  strategy:
-    matrix:
-      dynLoad:
-        hxml: run.hxml
-      noDynLoad:
-        hxml: run-no-dyn.hxml
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -132,7 +102,7 @@ jobs:
       displayName: Restore
       inputs:
         command: 'ci'
-    - script: npx haxe $(hxml)
+    - script: npx haxe run.hxml
       displayName: Run
       workingDirectory: $(Build.SourcesDirectory)/sample
       failOnStderr: true

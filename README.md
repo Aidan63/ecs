@@ -72,7 +72,7 @@ class VelocitySystem extends System
 
 The `iterate` macro function allows you to run a block of code for each entity in a specified family. Notice that `pos` and `vel` which were defined the the `movables` family are being used in the `iterate` function. When giving a name to a component in a family definition a variable of that name with that component for the current entity will be accessible in a iterate function for that family.
 
-To bring everything together we need to create a universe object, this will hold all entities, components, resources, and systems. Currently when adding a system you need to pass it several objects from the universe its being added to, in the future this will be changed.
+To bring everything together we need to create a universe object, this will hold all entities, components, resources, and systems. Universe creation and phases are covered in detail further down in this document.
 
 ```haxe
 import ecs.Universe;
@@ -82,10 +82,17 @@ import components.Components.Velocity;
 
 function main()
 {
-    final universe = new Universe(1024);
-    final object   = universe.createEntity();
-    
-    universe.setSystems(VelocitySystem);
+    final universe = Universe.create({
+        entities : 1024,
+        phases   : [
+            {
+                name    : 'game',
+                systems : [ VelocitySystem ]
+            }
+        ]
+    });
+
+    final object = universe.createEntity();
 
     universe.setComponents(object,
         Position,
@@ -100,7 +107,7 @@ function main()
 
 The function `setComponents` is a macro which eases the process of adding multiple components and notifying the required families about changes. If a component has a constructor with no parameters you can just enter its type and the new call will be generated for you. Constructors, fields, and function calls are also allowed in the macro. If you add a component which isn't used by any family the compiler will emit a warning and that expression will be skipped.
 
-The universe can then be ticked forward by calling the `update`. Systems are currently iterated upon in the order they were added. See future additions and details at the bottom of this README for possible changes / improvements to this.
+The universe can then be ticked forward by calling the `update` function. Phases and systems are iterated in the order they are defined at universe creation when using `universe.update`.
 
 This example can be found in the `sample` directory of this repository, it can be ran with `haxe run.hxml`, the universe will be ticked forward 120 times and the velocity system will update the entities position and print out the result along the way.
 
@@ -184,6 +191,47 @@ class MySystem extends System
 Using the `fullFamily` meta instead of `fastFamily` allows us to define resources which are required for the family to run. In the same way that `iterate` automatically creates variables for components `setup` create variables for any resources in that family.
 
 If the resources requested by a family are not currently all in the universe then the code block passed to `setup` will not be ran.
+
+### **Fetch**
+
+While the `iterate` macro provides a safe way to operate on every entity in a family, sometimes you may want to just operate on a single, know entity. In this case `fetch` operates in much the same way except that it takes an entity as an argument as well as the family. If the provided entity is not part of that family then the code in the final block expression is not executed.
+
+```haxe
+fetch(someFamily, someEntity, {
+    // code here is ran if `someEntity` is currently within `someFamily`
+});
+```
+
+This function sets up variables based on the family component names just like `iterate` and is perfect for performing setup or teardown code when an entity is added or removed from a family.
+
+```haxe
+class SpriteSystem extends System
+{
+    @:fullFamily var sprites : {
+        requires : { sprite : Sprite },
+        resources : { scene : GameScene }
+    };
+
+    override function onAdded()
+    {
+        sprites.onEntityAdded.subscribe(entity -> {
+            setup(sprites, {
+                fetch(sprites, entity, {
+                    scene.addSprite(sprite);
+                });
+            });
+        });
+
+        sprites.onEntityRemoved.subscribe(entity -> {
+            setup(sprites, {
+                fetch(sprites, entity, {
+                    scene.removeSprite(sprite);
+                });
+            });
+        });
+    }
+}
+```
 
 ### **Family Definition**
 
@@ -271,9 +319,63 @@ The above is an example of what a drawing system might look like and how it woul
 
 The code within the `setup` block will only be ran if all the resources requested by the family we're setting up are currently attached to the systems universe. This macro also handles creating local variables with the names specified in the family definition so we can safely access our resources. We can also then `iterate` over that same family allowing us to run pre and post iterate code.
 
+### **Phases**
+
+Phases are logical collections of systems, phases are defined at universe creation and cannot be modified afterwards. While they can't be modified phases and individual systems within can be enabled or disabled at will.
+
+```haxe
+final universe = Universe.create({
+    entities : 1024,
+    phases : [
+        {
+            name : 'game-logic',
+            systems : [
+                KeyboardMovementSystem,
+                GravitySystem,
+                VelocitySystem,
+                CollisionDetectionSystem
+            ]
+        },
+        {
+            name : 'rendering',
+            systems : [
+                SpriteDrawingSystem
+            ]
+        }
+    ]
+})
+```
+
+In the above example our universe is created with two phases, calling `universe.update` will then update all enabled phases and systems in the order defined in the universe. If you want more control over when phases are updated (e.g. you want a rendering or network phase to update at a different rate from the game simulation) you can use the `universe.getPhase` function to retrieve a phase based on its name.
+
+```haxe
+final phase = universe.getPhase('game-logic');
+
+phase.update(1 / 30);
+```
+
+Using the returned phase you can update, enable, and disable the system. Calling update on a phase which has been disabled will result in no systems being updated.
+
+You can also fetch specific systems from a phase with the `phase.getSystem` function. This function takes in the type of the system you want from the phase.
+
+```haxe
+final system = phase.getSystem(VelocitySystem);
+```
+
+The `phase.enableSystem` and `phase.disableSystem` also take in the type of the specific system to enable or disable.
+
+```haxe
+phase.disableSystem(VelocitySystem);
+phase.enableSystem(VelocitySystem);
+```
+
+:information_source: Information about disabled systems is preserved when disabling an entire phase. If you specifically disable a system then disable the phase its in and then at a late time re-enable the phase, that system which was specifically disabled won't be enabled.
+
+:warning: The `getPhase`, `getSystem`, `enableSystem`, and `disableSystem` are runtime functions and will throw an exception the specific phase or system is not found. These also search through all phases and systems performing type checks, so the performance characteristics of these functions may not be great. These may be changed to macro functions in the future, but for now I recommend pre-fetching any specific phases or systems up front and keep your own references to them.
+
 ### **OnAdded and OnRemoved**
 
-The `ecs.System` type contains `onAdded` and `onRemoved` functions which can be overridden to add custom code for when a system is added or removed from the universe. It is also perfectly save to access families, components, and resource from whithin these functions.
+The `ecs.System` type contains `onAdded` and `onRemoved` functions which can be overridden to add custom code for when a system is enabled or disabled in a phase. It is also perfectly safe to access families, components, and resource from whithin these functions.
 
 ```haxe
 class MySystem extends System
@@ -325,12 +427,6 @@ All components and resources requested by a family are guarenteed to still be ac
 
 ### Defines
 
-#### ecs.static_loading
-
-By default run time type information is used to store data about all possible components, families, resources, etc. This is then read at universe creation and used to pre-allocate arrays of the correct size. With the `ecs.static_loading` define you can opt out of this loading technique and use one which is entirely macro based. This has some caveats though, static loading is dependant on the compilers parsing order which means if all possible systems haven't yet been parsed by the time the universe constructor is parsed those systems will never been known about and will cause run time crashes.
-
-To use static loading ensure all of your systems are explicitly imported into the class (no wildcard imports or import.hx files) which is constructing the universe.
-
 #### ecs.invalidationFile
 
 For better compatibility with the haxe compilation server a file is used which allows systems to trigger the core ecs classes for wiping from the compilation cache. By default the folder of the output file is used. The compilation server does not define an output file so the invalidation file is placed in the projects root folder.
@@ -340,10 +436,6 @@ If you want to place the invalidation file else where this define allows you to 
 #### ecs.no_debug_output
 
 When the `--debug` flag is used ecs related debug information is printed to stdout, if you do not want this output in debug mode this define will stop it from being output.
-
-#### ecs.no_wildcard_warning
-
-Disables compiler warnings about detected wildcard imports in modules which use the `setSystems` universe function.
 
 ## **Implementation Details**
 
@@ -446,25 +538,3 @@ class VelocitySystem extends System
     }
 }
 ```
-
-## Future Additions and Improvements
-
-Need a better entity tracking / recycling setup, right now it will just fail when running out of entities.
-
-Would also like a way to specify the update priority of a system, unsure if this should be able to be changed on the fly though.
-
-I also really like the idea of phases from baldrick, an example of the api might be.
-
-```haxe
-final universe = new Universe(1024);
-
-final simPhase = universe.createPhase();
-final drawPhase = universe.createPhase();
-final networkPhase = universe.createPhase();
-
-simPhase.set(VelocitySystem, CollisionSystem);
-drawPhase.set(WorldDrawerSystem, SpriteDrawerSystem, HudDrawerSystem);
-networkPhase.set(SnapshotGeneratorSystem)
-```
-
-I've started but really need to build out a good test suite.

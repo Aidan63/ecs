@@ -79,54 +79,12 @@ macro function inject()
     {
         sys.FileSystem.createDirectory(Path.directory(file));
     }
-
-    Context.registerModuleDependency('ecs.Universe', file);
-    Context.registerModuleDependency('ecs.core.ComponentManager', file);
-    Context.registerModuleDependency('ecs.core.ResourceManager', file);
-    Context.registerModuleDependency('ecs.core.FamilyManager', file);
     
 #if (debug && !ecs.no_debug_output)
     Sys.println('[ecs] Set invalidation file to $file');
 #end
 
 #end
-
-    if (!Context.defined('ecs.static_loading'))
-    {
-        Context.onGenerate(_ -> {
-            // TODO : Search the provided types argument instead of using `Context.getType()`?
-
-            // Find the `ecs.core.FamilyManager` class and add meta data about all of the families.
-            // These will then be read at start up and added to the family manager.
-            final familyManager = Context.getType('ecs.core.FamilyManager').getClass();
-            familyManager.meta.add('componentCount', [ macro $v{ getComponentCount() } ], familyManager.pos);
-            familyManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], familyManager.pos);
-
-            final families  = getFamilies();
-            final familyIDs = new Array<Expr>();
-
-            for (family in families)
-            {
-                final cmpIDs = [ for (c in family.components) macro $v{ c.uID } ];
-                final resIDs = [ for (r in family.resources) macro $v{ r.uID } ];
-                final obj    = EObjectDecl([ { field: 'components', expr: macro $a{ cmpIDs } }, { field: 'resources', expr: macro $a{ resIDs } } ]);
-
-                familyIDs.push({ expr: obj, pos: familyManager.pos });
-            }
-
-            familyManager.meta.add('families', familyIDs, familyManager.pos);
-
-            // Find the `ecs.core.ResourceManager` class and add meta data about the maximum number of resources.
-            final resourceManager = Context.getType('ecs.core.ResourceManager').getClass();
-            resourceManager.meta.add('resourceCount', [ macro $v { getResourceCount() } ], resourceManager.pos);
-
-            // Find the `ecs.core.ComponentManager` class and add meta data about the maximum number of components.
-            // The ID of all components is also added.
-            final componentManager = Context.getType('ecs.core.ComponentManager').getClass();
-            componentManager.meta.add('componentCount', [ macro $v{ getComponentCount() } ], componentManager.pos);
-            componentManager.meta.add('components', [ for (c in getComponentMap()) macro $v{ c.id } ], componentManager.pos);
-        });
-    }
 
     return macro null;
 }

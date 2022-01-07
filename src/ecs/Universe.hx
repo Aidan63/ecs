@@ -1,47 +1,349 @@
 package ecs;
 
-import ecs.ds.Set;
+import haxe.Exception;
+import haxe.ds.Vector;
 import ecs.core.EntityManager;
 import ecs.core.FamilyManager;
-import ecs.core.SystemManager;
 import ecs.core.ResourceManager;
 import ecs.core.ComponentManager;
 
 #if macro
-import haxe.macro.Expr;
-import haxe.macro.Context;
+import ecs.ds.Set;
+import ecs.ds.Result;
 import ecs.macros.Utils;
 import ecs.macros.UniverseMacros;
 import ecs.macros.ComponentCache;
 import ecs.macros.ResourceCache;
 import ecs.macros.FamilyCache;
+import haxe.macro.Type;
+import haxe.macro.Expr;
+import haxe.macro.Context;
 
+using Safety;
 using Lambda;
 using EnumValue;
 using haxe.macro.Tools;
-#end
 
+private class SystemSpec
+{
+    public final type : Type;
+
+    public final pos : Position;
+
+    public final enabled : Bool;
+
+    public function new(_type, _pos, _enabled)
+    {
+        type    = _type;
+        pos     = _pos;
+        enabled = _enabled;
+    }
+}
+
+private class PhaseSpec
+{
+    public final name : String;
+
+    public final enabled : Bool;
+
+    public final systems : Array<SystemSpec>;
+
+    public function new(_name, _enabled, _systems)
+    {
+        name    = _name;
+        enabled = _enabled;
+        systems = _systems;
+    }
+}
+
+private class UniverseSpec
+{
+    public final name : String;
+
+    public final entities : Int;
+
+    public final phases : Array<PhaseSpec>;
+
+    public function new(_name, _entities, _phases)
+    {
+        name     = _name;
+        entities = _entities;
+        phases   = _phases;
+    }
+}
+
+private function buildTypePath(_existing : String, _expr : Expr) : Result<String, String>
+{
+    return switch _expr.expr
+    {
+        case EConst(CIdent(s)):
+            Ok('$s.$_existing');
+        case EField(e, field):
+            buildTypePath('$field.$_existing', e);
+        case other:
+            Error('unsupported expression in type path : $other');
+    }
+}
+
+#end
 
 class Universe
 {
+    @:ignoreInstrument public static macro function create(_spec : Expr)
+    {
+        final registerSystem = (e : Expr) -> {
+            return switch e.expr
+            {
+                case EConst(CIdent(i)):
+                    final t = try Context.getType(i) catch (exn) Context.error('Failed to get the type of "$i" : $exn', e.pos);
+
+                    return new SystemSpec(t, e.pos, true);
+                case EField(inner, field):
+                    switch buildTypePath(field, inner)
+                    {
+                        case Ok(path):
+                            final t = try Context.getType(path) catch (exn) Context.error('Failed to get the type of "$path" : $exn', e.pos);
+
+                            return new SystemSpec(t, e.pos, true);
+                        case Error(error):
+                            Context.error(error, e.pos);
+                    }
+                case other:
+                    Context.error('Expression is not a valid type path : $other', e.pos);
+            }
+        }
+
+        final extractPhase = (e : Expr) -> {
+            return switch e.expr
+            {
+                case EObjectDecl(fields):
+                    final name = switch fields.find(i -> i.field == 'name')
+                    {
+                        case null:
+                            Context.error('Phase does not contain a field called "name"', e.pos);
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EConst(CString(v)): v;
+                                case _: Context.error('field called "name" was not a string literal', field.expr.pos);
+                            }
+                    }
+                    final enabled = switch fields.find(i -> i.field == 'enabled')
+                    {
+                        case null:
+                            true;
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EConst(CIdent('true')): true;
+                                case EConst(CIdent('false')): false;
+                                case _: Context.error('field called "enabled" was not a boolean literal', field.expr.pos);
+                            }
+                    }
+                    final systems = switch fields.find(i -> i.field == 'systems')
+                    {
+                        case null:
+                            Context.error('Phase does not contain a field called "systems"', e.pos);
+                        case field:
+                            switch field.expr.expr
+                            {
+                                case EArrayDecl(values):
+                                    values.map(registerSystem);
+                                case _:
+                                    Context.error('field called "systems" was not an array declaration', field.expr.pos);
+                            }
+                    }
+
+                    new PhaseSpec(name, enabled, systems);
+                case _:
+                    Context.error('Phase definition must be an object declaration', e.pos);
+            }
+        }
+
+        final spec = switch _spec.expr
+        {
+            case EObjectDecl(fields):
+                final name = switch fields.find(i -> i.field == 'name')
+                {
+                    case null:
+                        'universe';
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EConst(CString(v)): v;
+                            case _: Context.error('field called "name" was not a string literal', field.expr.pos);
+                        }
+                }
+                final capacity = switch fields.find(i -> i.field == 'entities')
+                {
+                    case null:
+                        Context.error('Object has no field with the name "entities"', _spec.pos);
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EConst(CInt(v)): Std.parseInt(v);
+                            case _: Context.error('field called "entities" was not an integer literal', field.expr.pos);
+                        }
+                }
+                final phases = switch fields.find(i -> i.field == 'phases')
+                {
+                    case null:
+                        Context.error('Object has no field with the name "phases"', _spec.pos);
+                    case field:
+                        switch field.expr.expr
+                        {
+                            case EArrayDecl(values):
+                                values.map(extractPhase);
+                            case _: Context.error('field called "phases" was not an array declaratioon', field.expr.pos);
+                        }
+                }
+
+                new UniverseSpec(name, capacity, phases);
+            case _:
+                Context.error('Universe definition must be an object declaration', _spec.pos);
+        }
+
+#if display
+        // Register a dependency to the calling module and the invalidation file
+        // This means the compiler will invalidate the module whenever the file changes
+
+        Context.registerModuleDependency(Context.getLocalModule(), invalidationFile);
+#end
+
+        return macro {
+            // pre-allocate the phases and reserve a vector to contain all a phases systems.
+            // Do not allocate the phases right now, they need a reference to the universe so we defer that til afterwards.
+            final phases = {
+                final vec = new haxe.ds.Vector($v{ spec.phases.length });
+
+                $b{ [
+                    for (idx => phase in spec.phases)
+                    {
+                        macro vec.set(
+                            $v{ idx },
+                            new ecs.Phase(
+                                $v{ phase.enabled },
+                                $v{ phase.name },
+                                new haxe.ds.Vector($v{ phase.systems.length }),
+                                new haxe.ds.Vector($v{ phase.systems.length }))
+                        );
+                    }
+                ] }
+
+                vec;
+            }
+
+            final entities = new ecs.core.EntityManager($v{ spec.entities });
+            final components = {
+                final vec = new haxe.ds.Vector<Any>($v{ getComponentCount() });
+    
+                $b{
+                    [
+                        for (_ => value in getComponentMap())
+                        {
+                            final ct = value.type.toComplexType();
+            
+                            macro vec.set($v{ value.id }, new ecs.Components<$ct>($v{ getComponentCount() }));
+                        }
+                    ]
+                }
+
+                new ecs.core.ComponentManager(entities, vec);
+            }
+            final resources = new ecs.core.ResourceManager(new bits.Bits($v{ getResourceCount() }), new haxe.ds.Vector($v{ getResourceCount() }));
+            final families = {
+                final vec = new haxe.ds.Vector($v{ getFamilyCount() });
+
+                $b{ [
+                    for (idx => family in getFamilies())
+                    {
+                        macro {
+                            final cmpBits = new bits.Bits($v{ getComponentCount() });
+    
+                            $b{ [
+                                for (field in family.components)
+                                {
+                                    macro cmpBits.set($v{ field.uID });
+                                }
+                            ] }
+    
+                            final resBits = new bits.Bits($v{ getResourceCount() });
+    
+                            $b{ [
+                                for (field in family.resources)
+                                {
+                                    macro resBits.set($v{ field.uID });
+                                }
+                            ] }
+    
+                            vec.set($v{ idx }, new ecs.Family($v{ idx }, cmpBits, resBits, $v{ spec.entities }));
+                        }
+                    }
+                ] }
+
+                new ecs.core.FamilyManager(components, resources, vec);
+            }
+
+            final u = new ecs.Universe(entities, components, resources, families, phases);
+
+            // Second iteration over phases, now we allocate all our systems.
+            $b{ [
+                for (i => phase in spec.phases)
+                {
+                    macro {
+                        final phase = phases.get($v{ i });
+
+                        $b{ [
+                            for (j => system in phase.systems)
+                            {
+                                final tp = switch system.type
+                                {
+                                    case TInst(_.get() => cType, params):
+                                        @:privateAccess haxe.macro.TypeTools.toTypePath(cType, params);
+                                    case other:
+                                        // TODO : Keep the pos of the type so we can report the error at the right location.
+                                        Context.error('Expected system to be an instance : $other', system.pos);
+                                }
+
+                                macro {
+                                    final s = new $tp(u);
+
+                                    @:privateAccess phase.systems.set($v{ j }, s);
+                                    @:privateAccess phase.enabledSystems.set($v{ j }, $v{ system.enabled });
+
+                                    $e{ if (system.enabled) macro s.onAdded(); else macro null }
+                                };
+                            }
+                        ] }
+                    }
+                }
+            ] }
+
+            u;
+        }
+    }
+
     public final entities : EntityManager;
     public final components : ComponentManager;
     public final resources : ResourceManager;
     public final families : FamilyManager;
-    public final systems : SystemManager;
+    public final phases : Vector<Phase>;
 
-    public function new(_maxEntities)
+    public function new(_entities, _components, _resources, _families, _phases)
     {
-        entities   = new EntityManager(_maxEntities);
-        components = new ComponentManager(entities);
-        resources  = new ResourceManager();
-        families   = new FamilyManager(components, resources, _maxEntities);
-        systems    = new SystemManager();
+        entities   = _entities;
+        components = _components;
+        resources  = _resources;
+        families   = _families;
+        phases     = _phases;
     }
 
     public function update(_dt : Float)
     {
-        systems.update(_dt);
+        for (phase in phases)
+        {
+            phase.update(_dt);
+        }
     }
 
     /**
@@ -63,6 +365,19 @@ class Universe
         components.clear(_entity);
         families.whenEntityDestroyed(_entity);
         entities.destroy(_entity.id());
+    }
+
+    public function getPhase(_name)
+    {
+        for (phase in phases)
+        {
+            if (phase.name == _name)
+            {
+                return phase;
+            }
+        }
+
+        throw new Exception('Unable to find a phase with the name $_name');
     }
 
     /**
@@ -101,20 +416,16 @@ class Universe
      * @param _entity Entity to add components to.
      * @param _components Components to add.
      */
-    public macro function setComponents(self : Expr, _entity : Expr, _components : Array<Expr>)
+    @:ignoreInstrument public macro function setComponents(self : Expr, _entity : Expr, _components : Array<Expr>)
     {
-        final staticLoading = haxe.macro.Context.defined('ecs.static_loading');
-        final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
-        final added         = new Set();
-        final insert        = (id, compExpr) -> {
+        final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+        final added  = new Set();
+        final insert = (id, compExpr) -> {
             exprs.push(macro $e{ self }.components.set(_ecsTmpEntity, $v{ id }, $e{ compExpr }));
     
-            if (staticLoading)
+            for (familyID in ecs.macros.FamilyCache.getFamilyIDsWithComponent(id))
             {
-                for (familyID in ecs.macros.FamilyCache.getFamilyIDsWithComponent(id))
-                {
-                    added.add(familyID);
-                }
+                added.add(familyID);
             }
         }
     
@@ -126,42 +437,24 @@ class Universe
                     switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
                     {
                         case Some(type):
-                            if (staticLoading)
+                            switch getComponentID(signature(type))
                             {
-                                switch getComponentID(signature(type))
-                                {
-                                    case Some(id): insert(id, component);
-                                    case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
-                                }
-                            }
-                            else
-                            {
-                                insert(registerComponent(signature(type), type), component);
+                                case Some(id): insert(id, component);
+                                case None: Context.warning('Local ident $s : $type is not used in any families', component.pos);
                             }
                         case None:
                             final resolved  = try Context.getType(s) catch (_) Context.error('Unable to get type of component expression ${ component.toString() }', component.pos);
                             final signature = signature(resolved);
     
-                            if (staticLoading)
+                            switch getComponentID(signature)
                             {
-                                switch getComponentID(signature)
-                                {
-                                    case Some(id):
-                                        switch resolved.toComplexType()
-                                        {
-                                            case TPath(tp): insert(id, macro new $tp());
-                                            case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
-                                        }
-                                    case None: Context.warning('Component $resolved is not used in any families', component.pos);
-                                }
-                            }
-                            else
-                            {
-                                switch resolved.toComplexType()
-                                {
-                                    case TPath(tp): insert(registerComponent(signature, resolved), macro new $tp());
-                                    case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
-                                }
+                                case Some(id):
+                                    switch resolved.toComplexType()
+                                    {
+                                        case TPath(tp): insert(id, macro new $tp());
+                                        case other: Context.error('Component ${ other.toString() } should be TPath', component.pos);
+                                    }
+                                case None: Context.warning('Component $resolved is not used in any families', component.pos);
                             }
                     }
                 // We need to handle ENew separately as Context.typeof won't give typedef as a type.
@@ -188,27 +481,14 @@ class Universe
     
         // After all `set` functions are called check each family which could have been modified by the components added.
         exprs.push(macro final ecsEntCompFlags = $e{ self }.components.flags[_ecsTmpEntity.id()]);
-        if (staticLoading)
+
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
         {
-            // With static loaded the `added` set contains all families which could have been effected by the components added.
-            // So we only need to check those ones.
-            for (familyID in added)
-            {
-                exprs.push(macro final ecsTmpFamily = $e{ self }.families.get($v{ familyID }));
-                exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                });
-            }
-        }
-        else
-        {
-            // With dynamic loaded we have no choice but to check all families.
-            exprs.push(macro for (i in 0...$e{ self }.families.number) {
-                final ecsTmpFamily = $e{ self }.families.get(i);
-                if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
-                {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                }
+            exprs.push(macro final ecsTmpFamily = $e{ self }.families.get($v{ familyID }));
+            exprs.push(macro if (ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.add(_ecsTmpEntity);
             });
         }
     
@@ -231,20 +511,16 @@ class Universe
      * @param _entity Entity to remove components from.
      * @param _components Components to remove.
      */
-    public macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
+    @:ignoreInstrument public macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [ macro final _ecsTmpEntity = $e{ _entity } ];
-        final added         = new Set();
-        final insert        = id -> {
+        final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
+        final added  = new Set();
+        final insert = id -> {
             exprs.push(macro $e{ _universe }.components.remove(_ecsTmpEntity, $v{ id }));
-    
-            if (staticLoading)
+
+            for (familyID in getFamilyIDsWithComponent(id))
             {
-                for (familyID in getFamilyIDsWithComponent(id))
-                {
-                    added.add(familyID);
-                }
+                added.add(familyID);
             }
         };
     
@@ -277,27 +553,14 @@ class Universe
     
         // After all `remove` functions are called check each family which could have been modified by the components removed.
         exprs.push(macro final ecsEntCompFlags = $e{ _universe }.components.flags[_ecsTmpEntity.id()]);
-        if (staticLoading)
+
+        // With static loaded the `added` set contains all families which could have been effected by the components added.
+        // So we only need to check those ones.
+        for (familyID in added)
         {
-            // With static loaded the `added` set contains all families which could have been effected by the components added.
-            // So we only need to check those ones.
-            for (familyID in added)
-            {
-                exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
-                exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
-                    ecsTmpFamily.remove(_ecsTmpEntity);
-                });
-            }
-        }
-        else
-        {
-            // With dynamic loaded we have no choice but to check all families.
-            exprs.push(macro for (i in 0...$e{ _universe }.families.number) {
-                final ecsTmpFamily = $e{ _universe }.families.get(i);
-                if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask))
-                {
-                    ecsTmpFamily.add(_ecsTmpEntity);
-                }
+            exprs.push(macro final ecsTmpFamily = $e{ _universe }.families.get($v{ familyID }));
+            exprs.push(macro if (!ecsEntCompFlags.areSet(ecsTmpFamily.componentsMask)) {
+                ecsTmpFamily.remove(_ecsTmpEntity);
             });
         }
     
@@ -337,20 +600,16 @@ class Universe
      * @param _universe Universe to add resources to.
      * @param _resources Resources to add.
      */
-    public macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
+    @:ignoreInstrument public macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [];
-        final added         = new Set();
-        final insert        = (id, resExpr) -> {
+        final exprs  = [];
+        final added  = new Set();
+        final insert = (id, resExpr) -> {
             exprs.push(macro $e{ _universe }.resources.insert($v{ id }, $e{ resExpr }));
     
-            if (staticLoading)
+            for (familyID in getFamilyIDsWithResource(id))
             {
-                for (familyID in getFamilyIDsWithResource(id))
-                {
-                    added.add(familyID);
-                }   
+                added.add(familyID);
             }
         };
     
@@ -384,18 +643,9 @@ class Universe
         }
     
         // Add a call to try and activate each families which requested the resources.
-        // If we are not dynamically loading we can reduced the number of families we try and activate
-        // When dynamically loading we have no choice by to try and load each family.
-        if (staticLoading)
+        for (familyID in added)
         {
-            for (familyID in added)
-            {
-                exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
-            }
-        }
-        else
-        {
-            exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryActivate(i));
+            exprs.push(macro $e{ _universe }.families.tryActivate($v{ familyID }));
         }
     
         return macro $b{ exprs };
@@ -416,20 +666,16 @@ class Universe
      * @param _universe Universe to remove the resource from.
      * @param _components Resources to remove.
      */
-    public macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
+    @:ignoreInstrument public macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
-        final staticLoading = Context.defined('ecs.static_loading');
-        final exprs         = [];
-        final adder         = new Set();
-        final insert        = id -> {
+        final exprs  = [];
+        final adder  = new Set();
+        final insert = id -> {
             adder.add(id);
     
-            if (staticLoading)
+            for (familyID in getFamilyIDsWithResource(id))
             {
-                for (familyID in getFamilyIDsWithResource(id))
-                {
-                    exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
-                }
+                exprs.push(macro $e{ _universe }.families.get($v{ familyID }).deactivate());
             }
         };
     
@@ -469,143 +715,9 @@ class Universe
         // Remove the resources once each family has been deactivated
         for (resourceID in adder)
         {
-            if (!staticLoading)
-            {
-                exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i, $v{ resourceID }));
-            }
+            exprs.push(macro for (i in 0...$e{ _universe }.families.number) $e{ _universe }.families.tryDeactivate(i, $v{ resourceID }));
     
             exprs.push(macro $e{ _universe }.resources.remove($v{ resourceID }));
-        }
-    
-        return macro $b{ exprs };
-    }
-    
-    /**
-     * Add any number of systems to be ran by the provided universe.
-     * The final argument is a rest argument meaning it can take in any number of arguments.
-     * 
-     * Example usage for `using ecs.macros.UniverseMacros;`
-     * 
-     * ```
-     * unverse.setSystems(
-     *     new VelocitySystem(),
-     *     new SpriteDrawingSystem());
-     * ```
-     * 
-     * Along with the usual variable, function, and constructor expressions if the system does not have a custom
-     * constructor you can provide just the type and it will be constructed for you.
-     * 
-     * ```
-     * universe.setSystems(
-     *     new VelocitySystem(),
-     *     SpriteDrawingSystem);
-     * ```
-     * 
-     * Systems are updated in the order they were added, and adding the same system to the universe twice will cause it
-     * to be updated twice on every universe update.
-     * @param _universe Universe to add systems to.
-     * @param _systems Systems to add.
-     */
-    public macro function setSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
-    {
-#if (ecs.static_loading && !ecs.no_wildcard_warning)
-        // Using wildcard imports to access systems can break things! Wildcard imports are lazily imported, so if the universe it typed before
-        // a system it will never know about it.
-        // This is a simple check to see if we have any wildcard imports or usings, and warn the user if we do.
-
-        for (imp in Context.getLocalImports().filter(i -> i.mode.match(IAll)))
-        {
-            final path = imp.path[0].pos.getInfos().file;
-            final min  = 0;
-            final max  = {
-                var v = 0;
-
-                for (p in imp.path)
-                {
-                    final posMax = p.pos.getInfos().max;
-
-                    if (posMax > v)
-                    {
-                        v = posMax;
-                    }
-                }
-
-                v;
-            }
-
-            Context.warning(
-                '[ecs] Wildcard import detected. Please ensure you are not wildcard importing systems as they are lazily imported and will break at runtime',
-                Context.makePosition({ min : min, max : max, file : path }));
-        }
-#end
-
-        final exprs = [];
-    
-        for (system in _systems)
-        {
-            switch system.expr
-            {
-                case EConst(CIdent(s)):
-                    // Systems don't have unique IDs so we pass a function which will always return 0.
-                    // This way we can still use the same resolution logic
-                    switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
-                    {
-                        case Some(_):
-                            exprs.push(macro $e{ _universe }.systems.add($e{ system }));
-                        case None:
-                            final resolved = try Context.getType(s) catch (_) Context.error('Unable to get type of system expression ${ system.toString() }', system.pos);
-
-                            switch resolved.toComplexType()
-                            {
-                                case TPath(tp): exprs.push(macro $e{ _universe }.systems.add(new $tp($e{ _universe })));
-                                case other: Context.error('System $other should be TPath', system.pos);
-                            }
-                    }
-                case ENew(tp, _):
-                    exprs.push(macro $e{ _universe }.systems.add($e{ system }));
-                case _:
-                    Context.error('Unsupported system expression ${ system }', system.pos);
-            }
-        }
-    
-        return macro $b{ exprs };
-    }
-    
-    /**
-     * Remove any number of systems from the provided universe.
-     * The final argument is a rest argument meaning it can take in any number of arguments.
-     * 
-     * Example usage for `using ecs.macros.UniverseMacros;`
-     * 
-     * ```
-     * unverse.removeSystems(
-     *     someField,
-     *     functionWhichReturnsSomeSystem());
-     * ```
-     * 
-     * The system expressions must refer to a system object, as currently systems do not have a unique ID.
-     * 
-     * @param _universe Universe to remove systems from.
-     * @param _systems fields pointing to system objects to remove.
-     */
-    public macro function removeSystems(_universe : ExprOf<Universe>, _systems : Array<Expr>)
-    {
-        final exprs = [];
-    
-        for (system in _systems)
-        {
-            switch system.expr
-            {
-                case EConst(CIdent(s)):
-                    switch isLocalIdent(s, Context.getLocalType().getClass(), Context.getLocalTVars())
-                    {
-                        case Some(_):
-                            exprs.push(macro $e{ _universe }.systems.remove($e{ system }));
-                        case None:
-                            Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
-                    }
-                case _: Context.error('Only expressions which reference a system object can be used to remove a system', system.pos);
-            }
         }
     
         return macro $b{ exprs };

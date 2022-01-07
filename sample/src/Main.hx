@@ -1,15 +1,22 @@
 import ecs.Universe;
-import systems.VelocitySystem;
-import components.Components.Position;
-import components.Components.Velocity;
+import systems.*;
+import components.*;
 
 function main()
 {
-    final universe = new Universe(1024);
-    final object   = universe.createEntity();
+    final universe = Universe.create({
+        name : 'universe',
+        entities : 1024,
+        phases : [
+            {
+                name : 'logic',
+                systems : [ VelocitySystem ]
+            }
+        ]
+    });
 
-    universe.setSystems(VelocitySystem);
-    universe.setComponents(object,
+    universe.setComponents(
+        universe.createEntity(),
         Position,
         new Velocity(1, 1));
 

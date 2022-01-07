@@ -51,7 +51,7 @@ using Safety;
 	 * @param _families Either a family definition variable or an array of family definition variables. 
 	 * @param _function Code to execute if all the families are active.
 	 */
-	macro function setup(_this : Expr, _families : ExprOf<Family>, _function : Expr)
+	@:ignoreInstrument macro function setup(_this : Expr, _families : ExprOf<Family>, _function : Expr)
 	{
 		final familiesToSetup = switch _families.expr
 		{
@@ -150,7 +150,7 @@ using Safety;
 	 * @param _family Family to iterate over.
 	 * @param _function Code to run for each entity in the family.
 	 */
-	macro function iterate(_this : Expr, _family : ExprOf<Family>, _function : Expr)
+	@:ignoreInstrument macro function iterate(_this : Expr, _family : ExprOf<Family>, _function : Expr)
 	{
 		// Get the name of the family to iterate over.
 		final familyIdent = switch _family.expr
@@ -218,7 +218,7 @@ using Safety;
 	 * })
 	 * ```
 	 */
-	macro function fetch(_this : Expr, _family : ExprOf<Family>, _entity : ExprOf<Entity>, _function : Expr)
+	@:ignoreInstrument macro function fetch(_this : Expr, _family : ExprOf<Family>, _entity : ExprOf<Entity>, _function : Expr)
 	{
 		final familyIdent = switch _family.expr
 		{
@@ -281,7 +281,7 @@ using Safety;
 	 * ```
 	 * @param _type Type to get the table for.
 	 */
-	macro function table(_this : Expr, _type : ExprOf<TableType>)
+	@:ignoreInstrument macro function table(_this : Expr, _type : ExprOf<TableType>)
 	{
 		Context.warning('table is unsafe and will be removed in a future version, use fetch instead', Context.currentPos());
 

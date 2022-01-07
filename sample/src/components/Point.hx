@@ -12,7 +12,3 @@ class Point
         y = _y;
     }
 }
-
-typedef Position = Point;
-
-typedef Velocity = Point;

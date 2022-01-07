@@ -1,7 +1,0 @@
--cp src
--cp ../src
--L bits
--L safety
--D ecs.static_loading
---macro ecs.macros.Init.inject()
---run Main

@@ -19,31 +19,19 @@ class ComponentManager
      */
     public final flags : Vector<Bits>;
 
-    public function new(_entities)
+    public function new(_entities, _components)
     {
-        entities = _entities;
-        flags    = new Vector(_entities.capacity());
+        entities   = _entities;
+        components = _components;
+        flags      = {
+            final v = new Vector(_entities.capacity());
 
-#if ecs.static_loading
-        components = ecs.macros.ComponentMacros.createComponentVector();
+            for (i in 0...v.length)
+            {
+                v[i] = new Bits();
+            }
 
-        ecs.macros.ComponentMacros.setupComponents(_entities.capacity());
-#else
-        final meta           = haxe.rtti.Meta.getType(ComponentManager);
-        final componentCount = meta.componentCount[0];
-        final componentIDs   = meta.components;
-        
-        components = new Vector(componentCount);
-
-        for (id in componentIDs)
-        {
-            components.set(id, new ecs.Components<Any>(_entities.capacity()));
-        }
-#end
-
-        for (i in 0...flags.length)
-        {
-            flags[i] = new Bits();
+            v;
         }
     }
 
@@ -56,21 +44,12 @@ class ComponentManager
         return components[_compID];
     }
 
-#if ecs.static_loading
     @:generic public function set<T>(_entity : Entity, _id : Int, _component : T)
     {
         (components[_id] : Components<T>).set(_entity, _component);
 
         flags[_entity.id()].set(_id);
     }
-#else
-    public function set(_entity : Entity, _id : Int, _component : Any)
-    {
-        (components[_id] : Components<Any>).set(_entity, _component);
-
-        flags[_entity.id()].set(_id);
-    }
-#end
 
     public function remove(_entity : Entity, _id : Int)
     {

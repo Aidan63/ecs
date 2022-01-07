@@ -74,7 +74,7 @@ private class UniverseSpec
 
 class Universe
 {
-    public static macro function create(_spec : Expr)
+    @:ignoreInstrument public static macro function create(_spec : Expr)
     {
         final registerSystem = (e : Expr) -> {
             return switch e.expr
@@ -391,7 +391,7 @@ class Universe
      * @param _entity Entity to add components to.
      * @param _components Components to add.
      */
-    public macro function setComponents(self : Expr, _entity : Expr, _components : Array<Expr>)
+    @:ignoreInstrument public macro function setComponents(self : Expr, _entity : Expr, _components : Array<Expr>)
     {
         final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
         final added  = new Set();
@@ -486,7 +486,7 @@ class Universe
      * @param _entity Entity to remove components from.
      * @param _components Components to remove.
      */
-    public macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
+    @:ignoreInstrument public macro function removeComponents(_universe : ExprOf<Universe>, _entity : Expr, _components : Array<Expr>)
     {
         final exprs  = [ macro final _ecsTmpEntity = $e{ _entity } ];
         final added  = new Set();
@@ -575,7 +575,7 @@ class Universe
      * @param _universe Universe to add resources to.
      * @param _resources Resources to add.
      */
-    public macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
+    @:ignoreInstrument public macro function setResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
         final exprs  = [];
         final added  = new Set();
@@ -641,7 +641,7 @@ class Universe
      * @param _universe Universe to remove the resource from.
      * @param _components Resources to remove.
      */
-    public macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
+    @:ignoreInstrument public macro function removeResources(_universe : ExprOf<Universe>, _resources : Array<Expr>)
     {
         final exprs  = [];
         final adder  = new Set();

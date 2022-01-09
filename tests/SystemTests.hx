@@ -47,6 +47,48 @@ class SystemTests extends BuddySuite
 
                     system.adderInited.should.be(true);
                 });
+                it('will treat generic classes with different parameters as separate components', {
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ GenericClassParamsSystem ]
+                            }
+                        ]
+                    });
+
+                    final system = universe.getPhase('phase').getSystem(GenericClassParamsSystem);
+                    final comp   = new MyGenericClass(7);
+
+                    universe.setComponents(universe.createEntity(), new MyGenericClass('test'), comp);
+                    universe.update(0);
+
+                    system.gen1Value.should.be('test');
+                    system.gen2Value.should.be(7);
+                });
+                it('supports typedefs as separate component types', {
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ MovementSystem ]
+                            }
+                        ]
+                    });
+
+                    final system = universe.getPhase('phase').getSystem(MovementSystem);
+
+                    universe.setComponents(universe.createEntity(), new Position(2, 4), new Velocity(7, 10));
+                    universe.update(0);
+
+                    system.posX.should.be(2);
+                    system.posY.should.be(4);
+
+                    system.velX.should.be(7);
+                    system.velY.should.be(10);
+                });
             });
             describe('fetching', {
                 final universe = Universe.create({
@@ -112,6 +154,22 @@ class Issue4System extends System
     }
 }
 
+class GenericClassParamsSystem extends System
+{
+    @:fastFamily var family : { gen1 : MyGenericClass<String>, gen2 : MyGenericClass<Int> };
+
+    public var gen1Value = '';
+    public var gen2Value = 0;
+
+    override function update(_ : Float)
+    {
+        iterate(family, {
+            gen1Value = gen1.v;
+            gen2Value = gen2.v;
+        });
+    }
+}
+
 class ExtendedSystem extends Issue4System
 {
     public var adderInited (default, null) = false;
@@ -138,6 +196,30 @@ class FetchingSystem extends System
     }
 }
 
+class MovementSystem extends System
+{
+    @:fastFamily var movables : { pos : Position, vel : Velocity };
+
+    public var posX = 0.0;
+
+    public var posY = 0.0;
+
+    public var velX = 0.0;
+
+    public var velY = 0.0;
+
+    override function update(_ : Float)
+    {
+        iterate(movables, {
+            posX = pos.x;
+            posY = pos.y;
+
+            velX = vel.x;
+            velY = vel.y;
+        });
+    }
+}
+
 class CustomConstructorFamily extends FetchingSystem
 {
     public function new(_universe)
@@ -157,3 +239,30 @@ class CustomConstructorCodeFamily extends FetchingSystem
         myRes = family.isActive();
     }
 }
+
+class MyGenericClass<T>
+{
+    public var v : T;
+
+    public function new(_v)
+    {
+        v = _v;
+    }
+}
+
+class Point
+{
+    public var x : Float;
+
+    public var y : Float;
+
+    public function new(_x, _y)
+    {
+        x = _x;
+        y = _y;
+    }
+}
+
+typedef Position = Point;
+
+typedef Velocity = Point;

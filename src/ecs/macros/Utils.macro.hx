@@ -6,6 +6,8 @@ import haxe.macro.Printer;
 import haxe.crypto.Md5;
 
 using haxe.macro.TypeTools;
+using Lambda;
+using Safety;
 
 var invalidationFile : String;
 
@@ -28,19 +30,24 @@ function signature(_type : Type)
         case TAnonymous(_):
             throw new Exception('Cannot create signature of TAnonymous');
         case TEnum(_.get() => eType, params):
-            printTypePath(eType, params);
+            printBasePath(eType, params);
         case TInst(_.get() => cType, params):
-            printTypePath(cType, params);
+            printBasePath(cType, params);
         case TType(_.get() => tType, params):
-            printTypePath(tType, params);
+            printBasePath(tType, params);
         case TAbstract(_.get() => aType, params):
-            printTypePath(aType, params);
+            printBasePath(aType, params);
         case TDynamic(t):
             'Dynamic<${ signature(t) }>';
     });
 }
 
-private function printTypePath(t, params)
+function printBasePath(bt, params)
 {
-    return printer.printTypePath(@:privateAccess TypeTools.toTypePath(t, params));
+    return printTypePath(@:privateAccess TypeTools.toTypePath(bt, params));
+}
+
+function printTypePath(tp)
+{
+    return printer.printTypePath(tp);
 }

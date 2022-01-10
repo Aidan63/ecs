@@ -22,7 +22,7 @@ using Safety;
 		universe = _universe;
 	}
 
-	public function onAdded()
+	public function onEnabled()
 	{
 		//
 	}
@@ -32,7 +32,7 @@ using Safety;
 		//
 	}
 
-	public function onRemoved()
+	public function onDisabled()
 	{
 		//
 	}

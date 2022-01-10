@@ -311,7 +311,7 @@ class Universe
                                     @:privateAccess phase.systems.set($v{ j }, s);
                                     @:privateAccess phase.enabledSystems.set($v{ j }, $v{ system.enabled });
 
-                                    $e{ if (system.enabled) macro s.onAdded(); else macro null }
+                                    $e{ if (system.enabled) macro s.onEnabled(); else macro null }
                                 };
                             }
                         ] }

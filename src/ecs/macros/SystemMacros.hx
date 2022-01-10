@@ -161,10 +161,10 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
+    // This assignment expression in inserted into the systems constructor directly after the 
     final assignment = macro {
         @:mergeBlock $b{ [
             // First pass over the extracted families we define a new family field in the system for that type.
-            // We also add a call to get that family from the world at the top of the `onAdded` function.
             for (idx => family in families)
             {
                 output.push({
@@ -176,10 +176,8 @@ macro function familyConstruction() : Array<Field>
         
                 family.components.sort(sortFields);
                 family.resources.sort(sortFields);
-        
-                // Insert out `family.get` calls at the very top of the `onAdded` function.
-                // This we we can always access them in a overridden `onAdded`.
-        
+    
+                // We then insert expressions to fet all families from the universe.
                 final clsKey = '${ Utils.signature(Context.getLocalType()) }-${ family.name }';
         
                 macro $i{ family.name } = universe.families.get($v{ registerFamily(clsKey, family) });
@@ -187,7 +185,7 @@ macro function familyConstruction() : Array<Field>
         ] }
 
         @:mergeBlock $b{ [
-            // For all unique components add a `Components<T>` member field and insert a call to populate it in the `onAdded` function.
+            // For all unique components add a `Components<T>` member field and insert a call to populate it
             for (idx => component in getUniqueComponents(families))
             {
                 final ct   = component.type.toComplexType();

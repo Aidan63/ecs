@@ -168,7 +168,7 @@ class TestSystem extends System
         resources : { _ : TestResource1, _ : TestResource2 }
     }
 
-    override function onAdded()
+    override function onEnabled()
     {
         counter = 0;
         family.onEntityAdded.subscribe(_ -> counter++);
@@ -192,7 +192,7 @@ class TestResourceAccessSystem extends System
         resources : { res : TestResource1 }
     }
 
-    override function onAdded()
+    override function onEnabled()
     {
         family.onEntityAdded.subscribe(entity -> {
             setup(family, {
@@ -223,7 +223,7 @@ class TestMultiFamilyResourceAccessSystem extends System
         resources : { res : TestResource2 }
     }
 
-    override function onAdded()
+    override function onEnabled()
     {
         family1.onEntityAdded.subscribe(entity -> {
             setup(family1, {

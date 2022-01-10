@@ -174,7 +174,7 @@ class ExtendedSystem extends Issue4System
 {
     public var adderInited (default, null) = false;
 
-    override function onAdded()
+    override function onEnabled()
     {
         adderInited = true;
     }
@@ -186,7 +186,7 @@ class FetchingSystem extends System
 
     public var number (default, null) = -1;
 
-    override function onAdded()
+    override function onEnabled()
     {
         family.onEntityAdded.subscribe(e -> {
             fetch(family, e, {

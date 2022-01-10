@@ -79,7 +79,7 @@ class PhaseTests extends BuddySuite
 
             describe('enabling', {
                 describe('phases', {
-                    it('will not call onAdded on systems when enabling an already enabled phase', {
+                    it('will not call onEnabled on systems when enabling an already enabled phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -88,7 +88,7 @@ class PhaseTests extends BuddySuite
                         phase.enable();
                         system.addedCounter.should.be(0);
                     });
-                    it('will call onAdded on systems which are enabled when enabling a phase', {
+                    it('will call onEnabled on systems which are enabled when enabling a phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -97,7 +97,7 @@ class PhaseTests extends BuddySuite
                         phase.enable();
                         system.addedCounter.should.be(1);
                     });
-                    it('will not call onAdded on systems which were manually disabled when enabling a phase', {
+                    it('will not call onEnabled on systems which were manually disabled when enabling a phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ false ]);
@@ -108,7 +108,7 @@ class PhaseTests extends BuddySuite
                     });
                 });
                 describe('systems', {
-                    it('will call the onAdded function on a system when enabled', {
+                    it('will call the onEnabled function on a system when enabled', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ false ]);
@@ -117,7 +117,7 @@ class PhaseTests extends BuddySuite
                         phase.enableSystem(CountingSystem);
                         system.addedCounter.should.be(1);
                     });
-                    it('will not call the onAdded function on a system which is already enabled', {
+                    it('will not call the onEnabled function on a system which is already enabled', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -148,7 +148,7 @@ class PhaseTests extends BuddySuite
 
             describe('disabling', {
                 describe('phases', {
-                    it('will not call onRemoved on systems when disabling an already disabled phase', {
+                    it('will not call onDisabled on systems when disabling an already disabled phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -157,7 +157,7 @@ class PhaseTests extends BuddySuite
                         phase.disable();
                         system.removedCounter.should.be(0);
                     });
-                    it('will call onRemoved on systems which are enabled when disabling a phase', {
+                    it('will call onDisabled on systems which are enabled when disabling a phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -166,7 +166,7 @@ class PhaseTests extends BuddySuite
                         phase.disable();
                         system.removedCounter.should.be(1);
                     });
-                    it('will not call onRemoved on systems which were manually disabled when disabling a phase', {
+                    it('will not call onDisabled on systems which were manually disabled when disabling a phase', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ false ]);
@@ -177,7 +177,7 @@ class PhaseTests extends BuddySuite
                     });
                 });
                 describe('systems', {
-                    it('will call the onRemoved function on a system when disabled', {
+                    it('will call the onDisabled function on a system when disabled', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ true ]);
@@ -186,7 +186,7 @@ class PhaseTests extends BuddySuite
                         phase.disableSystem(CountingSystem);
                         system.removedCounter.should.be(1);
                     });
-                    it('will not call the onRemoved function on a system which is already disabled', {
+                    it('will not call the onDisabled function on a system which is already disabled', {
                         final system  = new CountingSystem(null);
                         final systems = Vector.fromArrayCopy([ (system : System) ]);
                         final enabled = Vector.fromArrayCopy([ false ]);
@@ -231,12 +231,12 @@ private class CountingSystem extends System
         updateCounter++;
     }
 
-    override function onAdded()
+    override function onEnabled()
     {
         addedCounter++;
     }
 
-    override function onRemoved()
+    override function onDisabled()
     {
         removedCounter++;
     }

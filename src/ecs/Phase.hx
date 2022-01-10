@@ -48,7 +48,7 @@ class Phase
         {
             if (enabledSystems[idx])
             {
-                systems[idx].onAdded();
+                systems[idx].onEnabled();
             }
         }
     }
@@ -64,7 +64,7 @@ class Phase
         {
             if (enabledSystems[idx])
             {
-                systems[idx].onRemoved();
+                systems[idx].onDisabled();
             }
         }
     }
@@ -82,7 +82,7 @@ class Phase
                     {
                         enabledSystems[idx] = true;
 
-                        system.onAdded();
+                        system.onEnabled();
                     }
 
                     return;
@@ -105,7 +105,7 @@ class Phase
                     {
                         enabledSystems[idx] = false;
 
-                        system.onRemoved();
+                        system.onDisabled();
                     }
 
                     return;

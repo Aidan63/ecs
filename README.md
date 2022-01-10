@@ -373,21 +373,21 @@ phase.enableSystem(VelocitySystem);
 
 :warning: The `getPhase`, `getSystem`, `enableSystem`, and `disableSystem` are runtime functions and will throw an exception the specific phase or system is not found. These also search through all phases and systems performing type checks, so the performance characteristics of these functions may not be great. These may be changed to macro functions in the future, but for now I recommend pre-fetching any specific phases or systems up front and keep your own references to them.
 
-### **OnAdded and OnRemoved**
+### **OnEnabled and OnDisabled**
 
-The `ecs.System` type contains `onAdded` and `onRemoved` functions which can be overridden to add custom code for when a system is enabled or disabled in a phase. It is also perfectly safe to access families, components, and resource from whithin these functions.
+The `ecs.System` type contains `onEnabled` and `onDisabled` functions which can be overridden to add custom code for when a system is enabled or disabled in a phase. It is also perfectly safe to access families, components, and resource from whithin these functions.
 
 ```haxe
 class MySystem extends System
 {
     @:fastFamily var myFamily : { _ : SomeComponent };
 
-    override function onAdded()
+    override function onEnabled()
     {
         trace(myFamily.isActive());
     }
 
-    override function onRemoved()
+    override function onDisabled()
     {
         trace(myFamily.isActive());
     }

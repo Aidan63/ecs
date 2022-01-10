@@ -460,14 +460,21 @@ class Universe
                 // We need to handle ENew separately as Context.typeof won't give typedef as a type.
                 case ENew(tp, _):
                     final resolved = {
-                        final first = try Context.getType(printTypePath(tp)) catch (exn) Context.error('unable to get type ${ component.toString() } : $exn', component.pos);
-
-                        switch first
+                        try
                         {
-                            case TType(_, _):
-                                first;
-                            case other:
-                                try Context.typeof(component) catch (exn) Context.error('unable to get type ${ component.toString() } : $exn', component.pos);
+                            final t = Context.getType(printTypePath(tp));
+
+                            switch t
+                            {
+                                case TType(_, _):
+                                    t;
+                                case _:
+                                    throw new Exception('Not a typedef');
+                            }
+                        }
+                        catch (exn)
+                        {
+                            try Context.typeof(component) catch (exn) Context.error('unable to get type ${ component.toString() } : $exn', component.pos);
                         }
                     }
                     final signature = signature(resolved);

@@ -44,7 +44,7 @@ class ComponentManager
         return components[_compID];
     }
 
-    @:generic public function set<T>(_entity : Entity, _id : Int, _component : T)
+    public function set<T>(_entity : Entity, _id : Int, _component : T)
     {
         (components[_id] : Components<T>).set(_entity, _component);
 

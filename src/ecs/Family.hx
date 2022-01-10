@@ -1,5 +1,6 @@
 package ecs;
 
+import ecs.ds.Unit;
 import ecs.ds.Signal;
 import ecs.ds.SparseSet;
 import bits.Bits;
@@ -11,6 +12,10 @@ class Family
     public final componentsMask : Bits;
 
     public final resourcesMask : Bits;
+
+    public final onActivated : Signal<Unit>;
+
+    public final onDeactivated : Signal<Unit>;
 
     public final onEntityAdded : Signal<Entity>;
 
@@ -27,8 +32,10 @@ class Family
         resourcesMask   = _resMask;
         onEntityAdded   = new Signal();
         onEntityRemoved = new Signal();
+        onActivated     = new Signal();
+        onDeactivated   = new Signal();
         entities        = new SparseSet(_size);
-        active          = if (resourcesMask.isEmpty()) true else false;
+        active          = false;
     }
 
     public function add(_entity)
@@ -68,6 +75,8 @@ class Family
         {
             active = true;
 
+            onActivated.notify(Unit.unit);
+
             for (i in 0...entities.size())
             {
                 onEntityAdded.notify(entities.getDense(i));
@@ -83,6 +92,8 @@ class Family
             {
                 onEntityRemoved.notify(entities.getDense(i));
             }
+
+            onDeactivated.notify(Unit.unit);
 
             active = false;
         }

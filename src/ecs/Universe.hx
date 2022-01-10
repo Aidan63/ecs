@@ -319,6 +319,11 @@ class Universe
                 }
             ] }
 
+            for (idx in 0...u.families.number)
+            {
+                u.families.tryActivate(idx);
+            }
+
             u;
         }
     }

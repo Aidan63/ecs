@@ -133,7 +133,7 @@ class SystemTests extends BuddySuite
                         ]
                     });
 
-                    universe.getPhase('phase').getSystem(CustomConstructorCodeFamily).myRes.should.be(true);
+                    universe.getPhase('phase').getSystem(CustomConstructorCodeFamily).myRes.should.be(7);
                 });
             });
         });
@@ -230,13 +230,13 @@ class CustomConstructorFamily extends FetchingSystem
 
 class CustomConstructorCodeFamily extends FetchingSystem
 {
-    public final myRes : Bool;
+    public final myRes : Int;
 
     public function new(_universe)
     {
         super(_universe);
 
-        myRes = family.isActive();
+        myRes = 7;
     }
 }
 

@@ -11,10 +11,10 @@ class FamilyTests extends BuddySuite
     {
         describe('Family Tests', {
             describe('construction', {
-                it('will immediately activate the family if it requires no resources', {
+                it('will not immediately activate the family if it requires no resources', {
                     final family = new Family(0, new Bits(), new Bits(), 8);
 
-                    family.isActive().should.be(true);
+                    family.isActive().should.be(false);
                 });
                 it('will not activate the family on creation if it requires resources', {
                     final bits = new Bits(4);
@@ -29,6 +29,8 @@ class FamilyTests extends BuddySuite
                 it('will publish added entities through the onEntityAdded signal if the family is activated', {
                     final entity = new Entity(7);
                     final family = new Family(0, new Bits(), new Bits(), 8);
+
+                    family.activate();
 
                     var id = -1;
                     family.onEntityAdded.subscribe(e -> id = e.id());
@@ -53,6 +55,8 @@ class FamilyTests extends BuddySuite
                     final entity = new Entity(7);
                     final family = new Family(0, new Bits(), new Bits(), 8);
 
+                    family.activate();
+
                     var id = 0;
                     family.onEntityAdded.subscribe(e -> id += e.id());
                     family.add(entity);
@@ -63,6 +67,8 @@ class FamilyTests extends BuddySuite
                 it('will publish removed entities through the onEntityRemoved signal if the family is activated', {
                     final entity = new Entity(7);
                     final family = new Family(0, new Bits(), new Bits(), 8);
+
+                    family.activate();
 
                     var id = -1;
                     family.onEntityRemoved.subscribe(e -> id = e.id());
@@ -88,6 +94,8 @@ class FamilyTests extends BuddySuite
                 it('will not publish removed entities through the onEntityRemoved signal if the entity is not in the family', {
                     final entity = new Entity(7);
                     final family = new Family(0, new Bits(), new Bits(), 8);
+
+                    family.activate();
 
                     var id = 0;
                     family.onEntityRemoved.subscribe(e -> id += e.id());
@@ -125,6 +133,8 @@ class FamilyTests extends BuddySuite
                     final family  = new Family(0, new Bits(), new Bits(), 8);
                     final removed = [];
 
+                    family.activate();
+
                     family.onEntityRemoved.subscribe(e -> removed.push(e));
                     family.add(e1);
                     family.add(e2);
@@ -144,12 +154,51 @@ class FamilyTests extends BuddySuite
                     final e3 = new Entity(7);
 
                     final family = new Family(0, new Bits(), new Bits(), 8);
+                    family.activate();
                     family.add(e1);
                     family.add(e2);
                     family.add(e3);
 
                     final out = [ for (e in family) e ];
                     out.should.containExactly([ e1, e2, e3 ]);
+                });
+            });
+            describe('events', {
+                var counter = 0;
+
+                final entity = new Entity(5);
+                final family = new Family(0, new Bits(), new Bits(), 8);
+
+                family.add(entity);
+
+                it('will have fired the onActivated and onEntityAdded callback', {
+                    family.onActivated.subscribe(_ -> {
+                        counter.should.be(0);
+                        counter++;
+                    });
+
+                    family.onEntityAdded.subscribe(_ -> {   
+                        counter.should.be(1);
+                        counter++;
+                    });
+
+                    family.activate();
+                    counter.should.be(2);
+                });
+
+                
+                it('will have fired the onEntityRemoved and onDeactivated callback', {
+                    family.onDeactivated.subscribe(_ -> {
+                        counter.should.be(1);
+                        counter--;
+                    });
+                    family.onEntityRemoved.subscribe(_ -> {
+                        counter.should.be(2);
+                        counter--;
+                    });
+
+                    family.deactivate();
+                    counter.should.be(0);
                 });
             });
         });

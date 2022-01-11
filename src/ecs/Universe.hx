@@ -207,7 +207,14 @@ class Universe
         // Register a dependency to the calling module and the invalidation file
         // This means the compiler will invalidate the module whenever the file changes
 
-        Context.registerModuleDependency(Context.getLocalModule(), invalidationFile);
+        final module = Context.getLocalModule();
+
+#if !ecs.no_debug_output
+        Sys.println('[ecs] Registered $module to have a dependency to the invalidation file');
+#end
+
+        Context.registerModuleDependency(module, invalidationFile);
+
 #end
 
         return macro {

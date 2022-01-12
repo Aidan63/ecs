@@ -90,5 +90,7 @@ macro function inject()
     Sys.println('[ecs] Set invalidation file to $file');
 #end
 
+#end
+
     return macro null;
 }

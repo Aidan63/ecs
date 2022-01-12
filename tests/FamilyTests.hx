@@ -201,6 +201,23 @@ class FamilyTests extends BuddySuite
                     counter.should.be(0);
                 });
             });
+            describe('regressions', {
+                it('will not remove an entity from the sparse set until the onEntityRemoved callback has been invoked (#12)', {
+                    final entity = new Entity(5);
+                    final family = new Family(0, new Bits(), new Bits(), 8);
+                    family.activate();
+
+                    family.onEntityRemoved.subscribe(e -> {
+                        e.should.be(entity);
+                        family.has(e).should.be(true);
+                    });
+
+                    family.add(entity);
+                    family.remove(entity);
+
+                    family.has(entity).should.be(false);
+                });
+            });
         });
     }
 }

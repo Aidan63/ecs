@@ -54,13 +54,13 @@ class Family
     public function remove(_entity)
     {
         if (entities.has(_entity))
-        {
-            entities.remove(_entity);
-            
+        {           
             if (isActive())
             {
                 onEntityRemoved.notify(_entity);
             }
+
+            entities.remove(_entity);
         }
     }
 

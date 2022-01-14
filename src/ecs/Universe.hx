@@ -203,19 +203,16 @@ class Universe
                 Context.error('Universe definition must be an object declaration', _spec.pos);
         }
 
-#if display
         // Register a dependency to the calling module and the invalidation file
         // This means the compiler will invalidate the module whenever the file changes
 
         final module = Context.getLocalModule();
 
-#if !ecs.no_debug_output
+#if (debug && !ecs.no_debug_output)
         Sys.println('[ecs] Registered $module to have a dependency to the invalidation file');
 #end
 
         Context.registerModuleDependency(module, invalidationFile);
-
-#end
 
         return macro {
             // pre-allocate the phases and reserve a vector to contain all a phases systems.

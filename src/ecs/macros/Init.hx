@@ -50,7 +50,6 @@ macro function printFullReport()
 
 macro function inject()
 {
-#if display
     // Whenever a system changes we need a way to invalidate the core ecs types.
     // The easiest way to do this is to register a dependency to a dummy file.
     // Whenever a systems auto macro is called it writes a random number to that file which should then invalidate the ecs types.
@@ -88,8 +87,6 @@ macro function inject()
     
 #if (debug && !ecs.no_debug_output)
     Sys.println('[ecs] Set invalidation file to $file');
-#end
-
 #end
 
     return macro null;

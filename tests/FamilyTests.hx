@@ -160,7 +160,7 @@ class FamilyTests extends BuddySuite
                     family.add(e3);
 
                     final out = [ for (e in family) e ];
-                    out.should.containExactly([ e1, e2, e3 ]);
+                    out.should.containAll([ e1, e2, e3 ]);
                 });
             });
             describe('events', {

@@ -122,16 +122,16 @@ private class FamilyIterator
     {
         set    = _set;
         active = _active;
-        idx    = 0;
+        idx    = _set.size() - 1;
     }
 
     public inline function hasNext()
     {
-        return active && idx < set.size();
+        return active && idx >= 0;
     }
 
     public inline function next()
     {
-        return set.getDense(idx++);
+        return set.getDense(idx--);
     }
 }

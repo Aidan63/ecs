@@ -1,3 +1,4 @@
+import ecs.Entity;
 import ecs.System;
 import ecs.Universe;
 import buddy.BuddySuite;
@@ -88,6 +89,29 @@ class SystemTests extends BuddySuite
 
                     system.velX.should.be(7);
                     system.velY.should.be(10);
+                });
+                it('supports modifying the currently iterated upon entity (#14)', {
+                    final universe = Universe.create({
+                        entities : 8,
+                        phases : [
+                            {
+                                name : 'phase',
+                                systems : [ EntityTrackingSystem ]
+                            }
+                        ]
+                    });
+
+                    final system   = universe.getPhase('phase').getSystem(EntityTrackingSystem);
+                    final entities = [ for (_ in 0...8) universe.createEntity() ];
+
+                    for (e in entities)
+                    {
+                        universe.setComponents(e, 0);
+                    }
+
+                    universe.update(0);
+
+                    system.iterated.should.containAll(entities);
                 });
             });
             describe('fetching', {
@@ -237,6 +261,20 @@ class CustomConstructorCodeFamily extends FetchingSystem
         super(_universe);
 
         myRes = 7;
+    }
+}
+
+class EntityTrackingSystem extends System {
+    @:fastFamily var myFam : { _ : Int };
+
+    public var iterated = new Array<Entity>();
+
+    override function update(_dt:Float)
+    {
+        iterate(myFam, e -> {
+            iterated.push(e);
+            universe.removeComponents(e, Int);
+        });
     }
 }
 

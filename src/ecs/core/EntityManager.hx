@@ -15,6 +15,7 @@ class EntityManager
         storage = new Vector(_max);
         recycleBin = new Vector(_max);
         nextID  = 0;
+	binSize = 0;
     }
 
     public function create()

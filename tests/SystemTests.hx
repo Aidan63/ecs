@@ -113,6 +113,25 @@ class SystemTests extends BuddySuite
 
                     system.iterated.should.containAll(entities);
                 });
+                it('does not care about the overall expression of a block passed into fetch (#15)', {
+                    final universe = Universe.create({
+                        entities : 10,
+                        phases : [
+                            {
+                                name    : "phase",
+                                systems : [ NonExhaustiveFetchSystem ]
+                            }
+                        ]
+                    });
+
+                    final comp = new Point(5, 0);
+                    final e1   = universe.createEntity();
+                    final e2   = universe.createEntity();
+
+                    universe.setComponents(e1, comp);
+                    universe.setComponents(e2, e1);
+                    universe.update(0);
+                });
             });
             describe('fetching', {
                 final universe = Universe.create({
@@ -276,6 +295,28 @@ class EntityTrackingSystem extends System {
             universe.removeComponents(e, Int);
         });
     }
+}
+
+class NonExhaustiveFetchSystem extends System {
+    @:fastFamily var fam : { comp : Point };
+	
+	@:fastFamily var fam2 : { ent : Entity };
+
+    override function update(_)
+    {	
+		iterate(fam2, {
+			fetch(fam, ent, {
+				if (comp.x < 5)
+                {
+                    comp.x = 5;
+                }
+				else if (comp.x > 5)
+                {
+                    comp.x = 5;
+                }
+			});
+		});
+	}
 }
 
 class MyGenericClass<T>

@@ -234,7 +234,7 @@ using Safety;
 
 		final blockExprs = switch _function.expr
 		{
-			case EBlock(exprs): exprs;
+			case EBlock(exprs): _function;
 			case _: Context.error('fetch function must be a code block', _function.pos);
 		}
 
@@ -258,10 +258,10 @@ using Safety;
 				forExpr.push(macro final $varName = ($i{ tableName }.get($e{ _entity }) : $ct));
 			}
 		}
-		for (e in blockExprs)
-		{
-			forExpr.push(e);
-		}
+		forExpr.push(blockExprs);
+
+		// Add a final 0 expr to make non exhaustive if checks acceptable as the last expr in the block.
+		forExpr.push(macro 0);
 
 		return macro {
 			if ($e{ _family }.has($e{ _entity }))

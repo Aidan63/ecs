@@ -126,6 +126,27 @@ class FamilyManagerTests extends BuddySuite
                 system.counter.should.be(0);
             });
 
+            it('still allows components to be accessed when an entity is deleted', {
+                final world = Universe.create({
+                    entities : 8,
+                    phases   : [
+                        {
+                            name : 'phase',
+                            systems : [ TestComponentAccessSystem ]
+                        }
+                    ]
+                });
+                final system = world.getPhase('phase').getSystem(TestComponentAccessSystem);
+                final entity = world.createEntity();
+
+                system.counter.should.be(0);
+
+                world.setComponents(entity, TestResource1);
+                world.deleteEntity(entity);
+
+                system.counter.should.be(1);
+            });
+
             describe('Regressions', {
                 it('will not deactivate all families when removing resources', {
                     final world  = Universe.create({
@@ -202,6 +223,22 @@ class TestResourceAccessSystem extends System
         family.onEntityRemoved.subscribe(entity -> {
             setup(family, {
                 counter -= res.const;
+            });
+        });
+    }
+}
+
+class TestComponentAccessSystem extends System
+{
+    public var counter = 0;
+
+    @:fastFamily var family : { comp : TestResource1 }
+
+    override function onEnabled()
+    {
+        family.onEntityRemoved.subscribe(entity -> {
+            fetch(family, entity, {
+                counter += comp.const;
             });
         });
     }

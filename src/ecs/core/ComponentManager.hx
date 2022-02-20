@@ -58,6 +58,11 @@ class ComponentManager
 
     public function clear(_entity : Entity)
     {
+        for (set in components)
+        {
+            (set : Components<Any>).set(_entity, null);
+        }
+
         flags[_entity.id()].clear();
     }
 }

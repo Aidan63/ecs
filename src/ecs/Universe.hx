@@ -371,8 +371,8 @@ class Universe
      */
     public function deleteEntity(_entity)
     {
-        components.clear(_entity);
         families.whenEntityDestroyed(_entity);
+        components.clear(_entity);
         entities.destroy(_entity.id());
     }
 

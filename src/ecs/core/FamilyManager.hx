@@ -52,14 +52,9 @@ class FamilyManager
 
     public function whenEntityDestroyed(_entity : Entity)
     {
-        final compFlags = components.flags[_entity.id()];
-
         for (family in families)
         {          
-            if (!compFlags.areSet(family.componentsMask))
-            {
-                family.remove(_entity);
-            }
+            family.remove(_entity);
         }
     }
 }

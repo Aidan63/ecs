@@ -44,6 +44,8 @@ class Phase
             return;
         }
 
+        enabled = true;
+
         for (idx in 0...systems.length)
         {
             if (enabledSystems[idx])
@@ -59,6 +61,8 @@ class Phase
         {
             return;
         }
+
+        enabled = false;
 
         for (idx in 0...systems.length)
         {

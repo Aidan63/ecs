@@ -26,6 +26,12 @@ class EntityManager
         }
 	   
         final idx = nextID++;
+	
+	if (idx >= storage.length)
+        {
+            throw "ECS entity limit exceeded";
+        }
+	
         final e   = new Entity(idx);
 
         storage[idx] = e;

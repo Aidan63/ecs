@@ -158,6 +158,8 @@ macro function familyConstruction() : Array<Field>
         }
     }
 
+    final currentClass = Context.getLocalClass().get();
+
     // This assignment expression in inserted into the systems constructor directly after the 
     final assignment = macro {
         @:mergeBlock $b{ [
@@ -183,7 +185,7 @@ macro function familyConstruction() : Array<Field>
 
         @:mergeBlock $b{ [
             // For all unique components add a `Components<T>` member field and insert a call to populate it
-            for (idx => component in getUniqueComponents(families))
+            for (idx => component in getUniqueComponents(currentClass, families))
             {
                 final ct   = component.type.toComplexType();
                 final name = 'table${ component.hash }';
@@ -192,7 +194,7 @@ macro function familyConstruction() : Array<Field>
                     name   : name,
                     pos    : Context.currentPos(),
                     access : [ AFinal ],
-                    kind   : FVar(macro : ecs.Components<$ct>),
+                    kind   : FVar(macro : ecs.Components<$ct>)
                 });
 
                 macro $i{ name } = cast universe.components.getTable($v{ component.uID });
@@ -370,10 +372,11 @@ private function extractFamilyComponentsFromObject(_fields : ReadOnlyArray<Field
 /**
  * Given a number of families returns all unique components requested by all of them.
  * This function checks by type not component variable name.
+ * @param _class Class of the system being constructed, used to ensure we don't redefine the same component twice.
  * @param _families Families to search.
  * @return ReadOnlyArray<FamilyField>
  */
-private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<RegisteredField>
+private function getUniqueComponents(_class : ClassType, _families : ReadOnlyArray<FamilyDefinition>) : ReadOnlyArray<RegisteredField>
 {
     final components = new Array<RegisteredField>();
 
@@ -381,7 +384,7 @@ private function getUniqueComponents(_families : ReadOnlyArray<FamilyDefinition>
     {
         for (component in family.components)
         {
-            if (!components.exists(f -> f.uID == component.uID))
+            if (!components.exists(f -> f.uID == component.uID) && _class.findField('table${ component.hash }') == null)
             {
                 components.push(component);
             }

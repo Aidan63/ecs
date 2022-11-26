@@ -99,10 +99,10 @@ class Family
         }
     }
 
-    public inline function getSize() 
+    public inline function size()
     {
-		return this.entities.size();
-	}
+        return entities.size();
+    }
     
     public function isActive()
     {

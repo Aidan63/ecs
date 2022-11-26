@@ -99,6 +99,11 @@ class Family
         }
     }
 
+    public inline function size()
+    {
+        return entities.size();
+    }
+    
     public function isActive()
     {
         return active;

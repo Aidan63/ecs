@@ -76,6 +76,9 @@ using Safety;
 				Context.error('Unsupported iterate expression $other', _function.pos);
 		};
 		
+		// Add a final 0 expr to make non exhaustive if checks acceptable as the last expr in the block.
+		extracted.push(macro 0);
+		
 		// Insert variable declarations to the top of the extracted function block.
 		// TODO : should probably check to make sure there are no type or name collisions.
 		for (ident in familiesToSetup)
@@ -204,6 +207,9 @@ using Safety;
 		{
 			forExpr.push(e);
 		}
+		
+		// Add a final 0 expr to make non exhaustive if checks acceptable as the last expr in the block.
+		forExpr.push(macro 0);
 	
 		return macro @:pos(Context.currentPos()) for ($i{ extracted.name } in $e{ _family }) $b{ forExpr };
 	}

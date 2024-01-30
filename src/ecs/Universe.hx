@@ -208,11 +208,14 @@ class Universe
 
         final module = Context.getLocalModule();
 
+        if (invalidationFile != null)
+        {
 #if (debug && !ecs.no_debug_output)
-        Sys.println('[ecs] Registered $module to have a dependency to the invalidation file');
+            Sys.println('[ecs] Registered $module to have a dependency to the invalidation file');
 #end
-
-        Context.registerModuleDependency(module, invalidationFile);
+    
+            Context.registerModuleDependency(module, invalidationFile);
+        }
 
         return macro {
             // pre-allocate the phases and reserve a vector to contain all a phases systems.

@@ -72,22 +72,33 @@ macro function inject()
             path;
     }
 
-    Utils.invalidationFile = file;
-
-    if (!sys.FileSystem.exists(Path.directory(file)))
+    if (Context.defined('ecs.noInvalidationFile'))
     {
-        sys.FileSystem.createDirectory(Path.directory(file));
-    }
+        Utils.invalidationFile = null;
 
-    Context.registerModuleDependency('ecs.Universe', Utils.invalidationFile);
-    Context.registerModuleDependency('ecs.core.ComponentManager', Utils.invalidationFile);
-    Context.registerModuleDependency('ecs.core.ResourceManager', Utils.invalidationFile);
-    Context.registerModuleDependency('ecs.core.EntityManager', Utils.invalidationFile);
-    Context.registerModuleDependency('ecs.core.FamilyManager', Utils.invalidationFile);
-    
 #if (debug && !ecs.no_debug_output)
-    Sys.println('[ecs] Set invalidation file to $file');
+        Sys.println('[ecs] Not using an invalidation file');
 #end
+    }
+    else
+    {
+        Utils.invalidationFile = file;
+
+        if (!sys.FileSystem.exists(Path.directory(file)))
+        {
+            sys.FileSystem.createDirectory(Path.directory(file));
+        }
+
+        Context.registerModuleDependency('ecs.Universe', Utils.invalidationFile);
+        Context.registerModuleDependency('ecs.core.ComponentManager', Utils.invalidationFile);
+        Context.registerModuleDependency('ecs.core.ResourceManager', Utils.invalidationFile);
+        Context.registerModuleDependency('ecs.core.EntityManager', Utils.invalidationFile);
+        Context.registerModuleDependency('ecs.core.FamilyManager', Utils.invalidationFile);
+        
+#if (debug && !ecs.no_debug_output)
+        Sys.println('[ecs] Set invalidation file to $file');
+#end
+    }
 
     return macro null;
 }

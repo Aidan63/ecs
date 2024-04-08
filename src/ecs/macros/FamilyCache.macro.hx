@@ -10,23 +10,23 @@ using haxe.macro.TypeTools;
 /**
  * Map of family IDs keyed by concatenated component types which compose that family.
  */
-private final familyIDs = new Map<String, Int>();
+@:persistent private final familyIDs = new Map<String, Int>();
 
 /**
  * Array of all family definitions. Index of each family is its unique ID.
  */
-private final familyDefinitions = new Array<FamilyDefinition>();
+@:persistent private final familyDefinitions = new Array<FamilyDefinition>();
 
 /**
  * All family definitions keyed by the name of the system and its used typed variable name.
  * The definition objects are fetched from the `familyDefinition` array.
  */
-private final keyedFamilies = new Map<String, FamilyDefinition>();
+@:persistent private final keyedFamilies = new Map<String, FamilyDefinition>();
 
 /**
  * Current family counter. Incremented each time a new family is encountered.
  */
-private var familyIncrementer = 0;
+@:persistent private var familyIncrementer = 0;
 
 /**
  * Returns the number of families registered.

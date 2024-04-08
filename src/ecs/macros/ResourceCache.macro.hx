@@ -4,9 +4,9 @@ import haxe.ds.Option;
 
 using Safety;
 
-private final resources = new Map<String, Int>();
+@:persistent private final resources = new Map<String, Int>();
 
-private var resourceIncrementer = 0;
+@:persistent private var resourceIncrementer = 0;
 
 /**
  * Returns the total number of unique components.

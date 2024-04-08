@@ -5,9 +5,9 @@ import haxe.macro.Type;
 
 using Safety;
 
-private final components = new Map<String, { id : Int, type : Type }>();
+@:persistent private final components = new Map<String, { id : Int, type : Type }>();
 
-private var componentIncrementer = 0;
+@:persistent private var componentIncrementer = 0;
 
 /**
  * Returns the total number of unique components.

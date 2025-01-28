@@ -5,7 +5,7 @@ import haxe.ds.Vector;
 
 class Phase
 {
-    var enabled : Bool;
+    public var enabled(default, null) : Bool;
 
     final systems : Vector<System>;
 
